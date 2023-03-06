@@ -1,44 +1,43 @@
 ﻿#pragma once
 
-#define NUM_CLIENTES 101
-#define NUM_CARROS 14
+// CONSTANTES DE LIMITE PARA VETOR
+#define NUM_JOBS 12
+#define NUM_RESOURCES 2
+#define HORIZONTE 35
 
-
-//Dados da solucao
+// DADOS DA SOLUCAO
 struct sSolucao {
-	int carroCliente[NUM_CARROS];
-	int carroPeso[NUM_CARROS];
-	int rota[NUM_CARROS][NUM_CLIENTES];
-	float ResultFO;
+	int ordem[NUM_JOBS];
+	int makespan;
+	int ResultFO;
 };
 typedef struct sSolucao Solucao;
 
-//Dados de entrada
-struct sPonto {
-	int x;
-	int y;
-	int num;
-	int peso;
+// DADOS DE ENTRADA
+struct sTarefa {
+	int numJob;
+	int numProximos;
+	int vetProximos[NUM_JOBS];
+	int vetRecursos[NUM_RESOURCES];
+	int duration;
 };
-typedef struct sPonto Cliente;
+typedef struct sTarefa Tarefa;
 
-Cliente clientes[NUM_CLIENTES];
-float custo[NUM_CLIENTES][NUM_CLIENTES];
-int capacidade;
-int numCarros;
-int numClientes;
-int tipoArquivo;
+// VARIAVEIS GLOBAIS DO RCPSP
+Tarefa tarefas[NUM_JOBS];
+int recursosDisponiveis[NUM_RESOURCES];
+int numTarefas;
+int numRecursos;
+int tempoHorizonte;
 long int contador;
 
-
-//Prototipos
+// PROTOTIPOS
 void lerArquivo(char* file_name);
 void lerSolucao(char* file_name, Solucao& solucao);
 void escreverEmArquivo(char* file_name, Solucao solucao);
-void calculaCusto();
-float distancia(Cliente x, Cliente y);
-void heuristicaConGul(Solucao& solucao);
+void heuristicaConAle(Solucao& solucao);
 void calculoFO(Solucao& solucao);
+int isViavel(Solucao solucao);
 void exibirSolucao(Solucao& solucao);
 void clonar(Solucao& solucaoC, Solucao& solucaoV);
 void gerarVizinho(Solucao& solucao);
