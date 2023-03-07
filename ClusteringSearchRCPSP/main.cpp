@@ -11,6 +11,8 @@
 
 //#define EXIBIR_MELHOR
 //#define MODO_DBGHEU
+#define MODO_DBGLEITURA
+//#define MODO_EXECUCAO
 
 int main()
 {
@@ -22,6 +24,36 @@ int main()
 	exibirSolucao(solucao1);
 #endif
 	lerArquivo(file);
+#ifdef MODO_DBGLEITURA
+	std::cout << "Numero de Tarefas: " << numTarefas << std::endl;
+	std::cout << "Numero de Recursos: " << numRecursos << std::endl;
+	std::cout << "Tempo Horizonte: " << tempoHorizonte << std::endl;
+	for (int nRecurso = 0; nRecurso < numRecursos; nRecurso++)
+	{
+		std::cout << "Recurso " << nRecurso + 1 << ": " << recursosDisponiveis[nRecurso] << std::endl;
+	}
+	for (int nTarefa = 0; nTarefa < numTarefas; nTarefa++)
+	{
+		std::cout << "Tarefa: " << tarefas[nTarefa].numJob << std::endl;
+		std::cout << "Duracao: " << tarefas[nTarefa].duration << std::endl;
+		std::cout << "Numero de Sucessores: " << tarefas[nTarefa].numProximos << std::endl;
+		for (int nProximo = 0; nProximo < tarefas[nTarefa].numProximos; nProximo++)
+		{
+			if (nProximo == 0) {
+				std::cout << "Sucessores: " << std::endl;
+			}
+			std::cout << tarefas[nTarefa].vetProximos[nProximo] << std::endl;
+		}
+		for (int nRecurso = 0; nRecurso < numRecursos; nRecurso++)
+		{
+			if (nRecurso == 0) {
+				std::cout << "Recursos: " << std::endl;
+			}
+			std::cout << "R " << nRecurso + 1 << ": " << tarefas[nTarefa].vetRecursos[nRecurso] << std::endl;
+		}
+	}
+#endif
+#ifdef MODO_EXECUCAO
 	double const alfa = 0.995, tempInicial = 100, tempCongelamento = 0.001, tempoMax = 120;
 	double tempoMelhor, tempoTotal;
 	int SAMax = 3;
@@ -33,6 +65,7 @@ int main()
 	std::cout << "tempo_total: " << tempoTotal << std::endl;
 	exibirSolucao(solucao);
 	escreverEmArquivo(escrita,solucao);
+#endif
 	system("pause");
 
 }
@@ -119,7 +152,7 @@ void lerArquivo(char* file) {
 			variavel_captacao[j] = '\0';
 			char* fim_captacao = strchr(variavel_captacao, ' ');
 			fim_captacao[0] = '\0';
-			numRecursos = atoi(fim_captacao);
+			numRecursos = atoi(variavel_captacao);
 		}
 		else if (strncmp(linha, "PRECEDENCE RELATIONS:", strlen("PRECEDENCE RELATIONS:")) == 0) {
 			// LER DE "PRECEDENCE RELATIONS:" ATE "************************************************************************", PULANDO UMA LINHA.
@@ -137,11 +170,12 @@ void lerArquivo(char* file) {
 				tarefas[numeroTarefa - 1].numProximos = numSucessores;
 				int numProximo = 0;
 				int numSucessor;
+				pch = strtok(NULL, " \n"); // CAPTA O PRIMEIRO SUCESSOR
 				while (pch != NULL) {
-					pch = strtok(NULL, " "); // CAPTA CADA SUCESSOR
 					numSucessor = atoi(pch);
 					tarefas[numeroTarefa - 1].vetProximos[numProximo] = numSucessor;
 					numProximo++;
+					pch = strtok(NULL, " \n"); // CAPTA O PROXIMO SUCESSOR
 				}
 				fgets(linha, 100, fp);
 			}
@@ -162,11 +196,12 @@ void lerArquivo(char* file) {
 				tarefas[numeroTarefa - 1].duration = duracao;
 				int numRecurso = 0;
 				int valorRecurso;
+				pch = strtok(NULL, " "); // CAPTA O PRIMEIRO RECURSO
 				while (pch != NULL) {
-					pch = strtok(NULL, " "); // CAPTA CADA RECURSO
 					valorRecurso = atoi(pch);
 					tarefas[numeroTarefa - 1].vetRecursos[numRecurso] = valorRecurso;
 					numRecurso++;
+					pch = strtok(NULL, " "); // CAPTA O PROXIMO RECURSO
 				}
 				fgets(linha, 100, fp);
 			}
@@ -178,11 +213,12 @@ void lerArquivo(char* file) {
 			char* pch;
 			int numRecurso = 0;
 			int valorRecurso;
+			pch = strtok(linha, " "); // CAPTA O PRIMEIRO RECURSO
 			while (pch != NULL) {
-				pch = strtok(NULL, " "); // CAPTA CADA RECURSO
 				valorRecurso = atoi(pch);
 				recursosDisponiveis[numRecurso] = valorRecurso;
 				numRecurso++;
+				pch = strtok(NULL, " "); // CAPTA O PROXIMO RECURSO
 			}
 		}
 	}
