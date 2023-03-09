@@ -30,6 +30,7 @@ int numTarefas;
 int numRecursos;
 int tempoHorizonte;
 long int contador;
+int vetorRecursosTempo[HORIZONTE][NUM_RESOURCES];
 
 // PROTOTIPOS
 void lerArquivo(char* file_name);
