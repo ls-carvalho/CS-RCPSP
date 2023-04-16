@@ -1,13 +1,16 @@
 ﻿#pragma once
 
-// CONSTANTES DE LIMITE PARA VETOR
+// TODO => construtiva gulosa => ANALISAR CODIGO PYTHON
+
+// CONSTANTES DE LIMITE PARA VETOR => TODO: AJUSTAR ESSES VALORES PARA OS MAIORES CASOS
 #define NUM_JOBS 12
 #define NUM_RESOURCES 2
 #define HORIZONTE 35
 
 // DADOS DA SOLUCAO
 struct sSolucao {
-	int ordem[NUM_JOBS];
+	int ordemTempo[NUM_JOBS]; // VETOR COM OS TEMPOS INICIAIS, ORDENADO PELO INDICE DA TAREFA
+	int ordemTarefa[NUM_JOBS]; // VETOR COM AS TAREFAS, ORDENADO PELA ORDEM DE TEMPOS INCIAIS
 	int makespan;
 	int ResultFO;
 };
@@ -31,8 +34,10 @@ int numRecursos;
 int tempoHorizonte;
 long int contador;
 int vetorRecursosTempo[HORIZONTE][NUM_RESOURCES];
+int posicaoInicialFinalTarefas[NUM_JOBS][2]; // TODO => APLICAR. MATRIZ AUXILIAR COM POSICAO INICIAL E FINAL DE CADA TAREFA, PARA AUXILIAR NA GERACAO DE VIZINHO; 0 = INICIAL / 1 = FINAL
 
 // PROTOTIPOS
+void calcularOrdem(Solucao& solucao);
 void lerArquivo(char* file_name);
 void lerSolucao(char* file_name, Solucao& solucao);
 void escreverEmArquivo(char* file_name, Solucao solucao);

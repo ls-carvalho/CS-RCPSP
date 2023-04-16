@@ -12,6 +12,10 @@
 //#define EXIBIR_MELHOR
 //#define MODO_DBGHEU
 
+// PARAMETROS:
+#define SA_MAX 3
+#define PENALIDADE_INVIABILIDADE 1.2
+
 int main()
 {
 	Solucao solucao, solucao1;
@@ -24,11 +28,10 @@ int main()
 	lerArquivo(file);
 	double const alfa = 0.995, tempInicial = 100, tempCongelamento = 0.001, tempoMax = 900;
 	double tempoMelhor, tempoTotal;
-	int SAMax = 3;
+	int SAMax = SA_MAX;
 	srand(time(0));
 	contador = 0;
-	// TODO: PERGUNTAR AO GERALDO SOBRE OS PARAMETROS DO SA
-	simAnnealing(alfa, tempInicial, tempCongelamento, SAMax * ( tempoHorizonte + (numTarefas * numRecursos)), solucao, tempoMax, tempoMelhor, tempoTotal);
+	simAnnealing(alfa, tempInicial, tempCongelamento, SAMax * (numTarefas * numRecursos), solucao, tempoMax, tempoMelhor, tempoTotal);
 	std::cout << contador << ", " << INT_MAX << std::endl;
 	std::cout << "tempo_melhor: " << tempoMelhor << std::endl;
 	std::cout << "tempo_total: " << tempoTotal << std::endl;
@@ -38,24 +41,47 @@ int main()
 
 }
 
-// TODO: PERGUNTAR AO GERALDO SE A ALEATORIA SATISFAZ, OU SE DEVO CRIAR UMA GULOSA OU ALEATORIA GULOSA
+void calcularOrdem(Solucao& solucao) {
+	for (int nTarefa = 0; nTarefa < numTarefas; nTarefa++) {
+		// INICIALIZA O VETOR DE 0 A N-1
+		solucao.ordemTarefa[nTarefa] = nTarefa;
+		// PREENCHE A MATRIZ DE TEMPO INCIAL x FINAL
+		posicaoInicialFinalTarefas[nTarefa][0] = solucao.ordemTempo[nTarefa];
+		posicaoInicialFinalTarefas[nTarefa][1] = solucao.ordemTempo[nTarefa] + tarefas[nTarefa].duration;
+	}
+	// ORDENA O VETOR COM BASE NOS VALORES DO VETOR DA ORDEM DOS TEMPOS, POR TAREFA
+	for (int nTarefa = 0; nTarefa < numTarefas; nTarefa++) {
+		for (int proxTarefa = nTarefa + 1; proxTarefa < numTarefas; proxTarefa++) {
+			if (solucao.ordemTempo[solucao.ordemTarefa[nTarefa]] > solucao.ordemTempo[solucao.ordemTarefa[proxTarefa]]) {
+				int temp = solucao.ordemTarefa[nTarefa];
+				solucao.ordemTarefa[nTarefa] = solucao.ordemTarefa[proxTarefa];
+				solucao.ordemTarefa[proxTarefa] = temp;
+			}
+		}
+	}
+}
+
+// TODO: IMPLEMENTAR/SUBSTITUIR PELA GULOSA
 void heuristicaConAle(Solucao& solucao) {
-	// LIMPA AS VARIAVEIS
+	// INICIALIZA AS VARIAVEIS
 	solucao.makespan = 0;
 	solucao.ResultFO = 0;
-	memset(solucao.ordem, -1, sizeof(solucao.ordem));
-	solucao.ordem[0] = 0;
-	solucao.ordem[numTarefas - 1] = 0;
+	memset(solucao.ordemTempo, -1, sizeof(solucao.ordemTempo));
+	memset(solucao.ordemTarefa, -1, sizeof(solucao.ordemTarefa));
+	solucao.ordemTempo[0] = 0;
+	solucao.ordemTarefa[0] = 1;
+	solucao.ordemTarefa[numTarefas - 1] = numTarefas;
 	// INSERE UM TEMPO INCIAL ALEATORIO PARA CADA TAREFA EXCLUINDO A PRIMEIRA E A ULTIMA TAREFA DA LISTA
 	for (int nTarefa = 1; nTarefa < numTarefas - 1; nTarefa++) {
 		int tempoInicial;
 		tempoInicial = rand() % tempoHorizonte;
-		solucao.ordem[nTarefa] = tempoInicial;
+		solucao.ordemTempo[nTarefa] = tempoInicial;
 #ifdef MODO_DBGHEU // TODO: REMOVER
 		std::cout << "Tarefa: " << nTarefa << std::endl;
 		std::cout << "Tempo Inicial: " << tempoInicial << std::endl;
 #endif
 	}
+	solucao.ordemTempo[numTarefas - 1] = 0; // TODO: AJUSTAR ESSE VALOR PARA O ULTIMO VALOR
 }
 
 void lerArquivo(char* file) {
@@ -127,7 +153,7 @@ void lerArquivo(char* file) {
 		else if (strncmp(linha, "PRECEDENCE RELATIONS:", strlen("PRECEDENCE RELATIONS:")) == 0) {
 			// LER DE "PRECEDENCE RELATIONS:" ATE "************************************************************************", PULANDO UMA LINHA.
 			fgets(linha, 100, fp); // PULA A LINHA DO CABECALHO
-			fgets(linha, 100, fp); 
+			fgets(linha, 100, fp);
 			while (strncmp(linha, "************************************************************************", strlen("************************************************************************")) != 0) {
 				// PARA CADA LINHA
 				char* pch;
@@ -257,12 +283,13 @@ void lerSolucao(char* file, Solucao& solucao) {
 				numTarefas = numeroTarefa;
 				pch = strtok(NULL, " \t\n"); // CAPTA O TEMPO INICIAL
 				int tempoInicial = atoi(pch);
-				solucao.ordem[numeroTarefa - 1] = tempoInicial;
+				solucao.ordemTempo[numeroTarefa - 1] = tempoInicial;
 				fgets(linha, 100, fp);
 			}
 		}
 	}
 	fclose(fp);
+	calcularOrdem(solucao);
 }
 
 void escreverEmArquivo(char* file_name, Solucao solucao) {
@@ -308,7 +335,7 @@ void escreverEmArquivo(char* file_name, Solucao solucao) {
 		strcpy(linha, aux);
 		strcat(linha, "\t");
 		// ESCREVENDO OS TEMPOS INCIAIS
-		_itoa(solucao.ordem[nTarefa], aux, 10);
+		_itoa(solucao.ordemTempo[nTarefa], aux, 10);
 		strcat(linha, aux);
 		strcat(linha, "\n");
 		fputs(linha, fp);
@@ -322,21 +349,21 @@ void calculoFO(Solucao& solucao) {
 	solucao.ResultFO = 0;
 	// CALCULO DE MAKESPAN
 	for (int nTarefa = 0; nTarefa < numTarefas; nTarefa++) {
-		tempoFinal = solucao.ordem[nTarefa] + tarefas[nTarefa].duration;
+		tempoFinal = solucao.ordemTempo[nTarefa] + tarefas[nTarefa].duration;
 		if (solucao.makespan < tempoFinal) {
 			solucao.makespan = tempoFinal;
 		}
 	}
 	// CALCULO DA FO
 	if (isViavel(solucao) == 1) {
-		// TODO: PERGUNTAR AO GERALDO QUAL TRATATIVA EU FACO PARA AS FO INVIAVEIS
 		solucao.ResultFO = solucao.makespan;
 	}
 	else {
-		solucao.ResultFO = solucao.makespan * 1.2;
+		solucao.ResultFO = solucao.makespan * PENALIDADE_INVIABILIDADE;
 	}
 }
 
+// TODO => REFATORAR
 int isViavel(Solucao solucao) {
 	for (int nHorizonte = 0; nHorizonte < tempoHorizonte; nHorizonte++)
 	{
@@ -350,7 +377,7 @@ int isViavel(Solucao solucao) {
 	{
 		for (int nTarefa = 0; nTarefa < numTarefas; nTarefa++)
 		{
-			int tempoInicialTarefa = solucao.ordem[nTarefa];
+			int tempoInicialTarefa = solucao.ordemTempo[nTarefa];
 			for (int tempoRelativo = tempoInicialTarefa; tempoRelativo <= (tempoInicialTarefa + tarefas[nTarefa].duration); tempoRelativo++)
 			{
 				vetorRecursosTempo[tempoRelativo][nRecurso] = vetorRecursosTempo[tempoRelativo][nRecurso] + tarefas[nTarefa].vetRecursos[nRecurso];
@@ -370,13 +397,13 @@ int isViavel(Solucao solucao) {
 	// VARRE O VETOR DE TAREFAS
 	for (int nTarefa = 0; nTarefa < numTarefas; nTarefa++)
 	{
-		if (solucao.ordem[nTarefa] + tarefas[nTarefa].duration > tempoHorizonte) { // TEMPO_FINAL_TAREFA > HORIZONTE
+		if (solucao.ordemTempo[nTarefa] + tarefas[nTarefa].duration > tempoHorizonte) { // TEMPO_FINAL_TAREFA > HORIZONTE
 			return 0;
 		}
 		for (int nSucessor = 0; nSucessor < tarefas[nTarefa].numProximos; nSucessor++)
 		{
 			int proximoSucessor = tarefas[nTarefa].vetProximos[nSucessor];
-			if (solucao.ordem[proximoSucessor] <= (solucao.ordem[nTarefa] + tarefas[nTarefa].duration)) { // TEMPO_FINAL_TAREFA >= TEMPO_INICIAL_SUCESSOR ? INVIAVEL : VIAVEL.
+			if (solucao.ordemTempo[proximoSucessor] <= (solucao.ordemTempo[nTarefa] + tarefas[nTarefa].duration)) { // TEMPO_FINAL_TAREFA >= TEMPO_INICIAL_SUCESSOR ? INVIAVEL : VIAVEL.
 				return 0;
 			}
 		}
@@ -390,7 +417,7 @@ void exibirSolucao(Solucao& solucao) {
 	std::cout << "Makespan: " << solucao.makespan << std::endl;
 	for (int nTarefa = 0; nTarefa < numTarefas; nTarefa++)
 	{
-		std::cout << "Job: " << nTarefa + 1 << " Start Time: " << solucao.ordem[nTarefa] << std::endl;
+		std::cout << "Job: " << nTarefa + 1 << " Start Time: " << solucao.ordemTempo[nTarefa] << std::endl;
 	}
 }
 
@@ -398,25 +425,16 @@ void clonar(Solucao& solucaoC, Solucao& solucaoV) {
 	memcpy(&solucaoC, &solucaoV, sizeof(solucaoV));
 }
 
-// TODO: PERGUNTAR AO GERALDO SE E NECESSARIO UMA FUNCAO QUE SEMPRE GERE UM VIZINHO VIAVEL
+// TODO: NECESSARIO UMA FUNCAO QUE SEMPRE GERE UM VIZINHO VIAVEL, MAS APENAS FOCANDO EM PRECEDENCIA. REFATORAR ABAIXO.
 void gerarVizinho(Solucao& solucao) {
 	srand(time(0));
 	int random_pos, random_time, temp, tarefasUteis, tempoUtil;
 	tarefasUteis = numTarefas - 2;
-	switch (rand() % 2) {
-	case 0:	// TROCA DE TEMPOS INICIAIS (POSICOES) ENTRE DUAS TAREFAS VIZINHAS
-		random_pos = rand() % tarefasUteis + 1;
-		temp = solucao.ordem[random_pos];
-		solucao.ordem[random_pos] = solucao.ordem[random_pos+1];
-		solucao.ordem[random_pos+1] = temp;
-		break;
-	case 1: // RANDOMIZAR O TEMPO INCIAL DE UMA TAREFA ALEATORIA
-		random_pos = rand() % tarefasUteis + 1;
-		tempoUtil = tempoHorizonte - tarefas[random_pos].duration;
-		random_time = rand() % tempoUtil;
-		solucao.ordem[random_pos] = random_time;
-		break;
-	}
+	// TROCA DE TEMPOS INICIAIS (POSICOES) ENTRE DUAS TAREFAS VIZINHAS
+	random_pos = rand() % tarefasUteis + 1;
+	temp = solucao.ordemTempo[random_pos];
+	solucao.ordemTempo[random_pos] = solucao.ordemTempo[random_pos + 1];
+	solucao.ordemTempo[random_pos + 1] = temp;
 	calculoFO(solucao);
 }
 
@@ -441,7 +459,7 @@ void simAnnealing(const double alfa, const double tempInicial, const double temp
 		while (temperatura > tempCongelamento) {
 			for (int i = 0; i < SAMax; i++) {
 				memcpy(&solucaoVizinha, &solucaoAtual, sizeof(solucaoVizinha));
-				gerarVizinho(solucaoVizinha);		
+				gerarVizinho(solucaoVizinha);
 				contador++;
 				delta = solucaoVizinha.ResultFO - solucaoAtual.ResultFO;
 				if (delta < 0) {
