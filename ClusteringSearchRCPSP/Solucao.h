@@ -21,6 +21,8 @@ struct sTarefa {
 	int numJob;
 	int numProximos;
 	int vetProximos[NUM_JOBS];
+	int numAnteriores;
+	int vetAnteriores[NUM_JOBS];
 	int vetRecursos[NUM_RESOURCES];
 	int duration;
 };
@@ -34,14 +36,16 @@ int numRecursos;
 int tempoHorizonte;
 long int contador;
 int vetorRecursosTempo[HORIZONTE][NUM_RESOURCES];
-int posicaoInicialFinalTarefas[NUM_JOBS][2]; // TODO => APLICAR. MATRIZ AUXILIAR COM POSICAO INICIAL E FINAL DE CADA TAREFA, PARA AUXILIAR NA GERACAO DE VIZINHO; 0 = INICIAL / 1 = FINAL
+int posicaoInicialFinalTarefas[NUM_JOBS][2]; // 0 = INICIAL / 1 = FINAL
+int matrizAntecessorSucessor[NUM_JOBS][NUM_JOBS]; // TODO => APLICAR. 0 = NULL / 1 = ANTECESSOR / 2 = SUCESSOR
 
 // PROTOTIPOS
 void calcularOrdem(Solucao& solucao);
+void calcularAntecessores();
+void heuristicaConGul(Solucao& solucao);
 void lerArquivo(char* file_name);
 void lerSolucao(char* file_name, Solucao& solucao);
 void escreverEmArquivo(char* file_name, Solucao solucao);
-void heuristicaConAle(Solucao& solucao);
 void calculoFO(Solucao& solucao);
 int isViavel(Solucao solucao);
 void exibirSolucao(Solucao& solucao);

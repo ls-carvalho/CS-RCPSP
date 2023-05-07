@@ -44,7 +44,7 @@ int main()
 void calcularOrdem(Solucao& solucao) {
 	for (int nTarefa = 0; nTarefa < numTarefas; nTarefa++) {
 		// INICIALIZA O VETOR DE 0 A N-1
-		solucao.ordemTarefa[nTarefa] = nTarefa;
+		solucao.ordemTarefa[nTarefa] = nTarefa; // TODO => ACHO QUE ISSO VAI DAR ERRAD, POIS É USADO NA LEITURA DA SOLUÇÃO, MAS É GERADO NA HEURISTÍCA TAMBÉM.
 		// PREENCHE A MATRIZ DE TEMPO INCIAL x FINAL
 		posicaoInicialFinalTarefas[nTarefa][0] = solucao.ordemTempo[nTarefa];
 		posicaoInicialFinalTarefas[nTarefa][1] = solucao.ordemTempo[nTarefa] + tarefas[nTarefa].duration;
@@ -61,8 +61,24 @@ void calcularOrdem(Solucao& solucao) {
 	}
 }
 
-// TODO: IMPLEMENTAR/SUBSTITUIR PELA GULOSA
-void heuristicaConAle(Solucao& solucao) {
+void calcularAntecessores() {
+	for (int tarefaAtual = 0; tarefaAtual < numTarefas; tarefaAtual++)
+	{
+		tarefas[tarefaAtual].numAnteriores = 0; // INIALIZA OS ANTERIORES COMO 0
+	}
+
+	for (int tarefaAtual = 0; tarefaAtual < numTarefas; tarefaAtual++)
+	{
+		for (int proxima = 0; proxima < tarefas[tarefaAtual].numProximos; proxima++)
+		{
+			int tarefaAlvo = tarefas[tarefaAtual].vetProximos[proxima];
+			tarefas[tarefaAlvo-1].numAnteriores += 1; // ATUALIZA O NUMERO DE ANTERIORES DO SUCESSOR
+			tarefas[tarefaAlvo-1].vetAnteriores[tarefas[tarefaAlvo-1].numAnteriores - 1] = tarefas[tarefaAtual].numJob; // ADICIONA O ANTERIOR DO SUCESSOR NA RESPECTIVA LISTA DO MESMO
+		}
+	}
+}
+
+void heuristicaConGul(Solucao& solucao) {
 	// INICIALIZA AS VARIAVEIS
 	solucao.makespan = 0;
 	solucao.ResultFO = 0;
@@ -71,17 +87,49 @@ void heuristicaConAle(Solucao& solucao) {
 	solucao.ordemTempo[0] = 0;
 	solucao.ordemTarefa[0] = 1;
 	solucao.ordemTarefa[numTarefas - 1] = numTarefas;
-	// INSERE UM TEMPO INCIAL ALEATORIO PARA CADA TAREFA EXCLUINDO A PRIMEIRA E A ULTIMA TAREFA DA LISTA
-	for (int nTarefa = 1; nTarefa < numTarefas - 1; nTarefa++) {
-		int tempoInicial;
-		tempoInicial = rand() % tempoHorizonte;
-		solucao.ordemTempo[nTarefa] = tempoInicial;
-#ifdef MODO_DBGHEU // TODO: REMOVER
-		std::cout << "Tarefa: " << nTarefa << std::endl;
-		std::cout << "Tempo Inicial: " << tempoInicial << std::endl;
-#endif
+	calcularAntecessores();
+	int tarefasNaoAlocadas[NUM_JOBS+NUM_JOBS]; // EVITAR OVERFLOW DE BUFFER POR REGISTRAR NUMEROS NEGATIVOS
+	tarefasNaoAlocadas[0] = -1;
+	tarefasNaoAlocadas[numTarefas] = -1;
+	for (int tarefaAtual = 1; tarefaAtual < numTarefas; tarefaAtual++)
+	{
+		tarefasNaoAlocadas[tarefaAtual] = tarefas[tarefaAtual].numAnteriores;
 	}
-	solucao.ordemTempo[numTarefas - 1] = 0; // TODO: AJUSTAR ESSE VALOR PARA O ULTIMO VALOR
+	posicaoInicialFinalTarefas[0][0] = 0;
+	posicaoInicialFinalTarefas[0][1] = 0;
+	for (int ordemTarefa = 1; ordemTarefa < numTarefas-1; ordemTarefa++)
+	{
+		for (int tarefaAtual = 1; tarefaAtual < numTarefas-1; tarefaAtual++)
+		{
+			if (tarefasNaoAlocadas[tarefaAtual] == -1) continue; // TAREFA JA FOI ALOCADA. PROXIMA.
+			if (tarefas[tarefaAtual].numAnteriores == 0) { // TAREFA SEM ANTECESSOR PODE E ALOCADA.
+				solucao.ordemTarefa[ordemTarefa] = tarefas[tarefaAtual].numJob;
+				tarefasNaoAlocadas[tarefaAtual] = -1;
+				break;
+			}
+			int todosAntecessoresAlocados = 1;
+			for (int antecessor = 0; antecessor < tarefas[tarefaAtual].numAnteriores; antecessor++)
+			{
+				if (tarefasNaoAlocadas[tarefas[tarefaAtual].vetAnteriores[antecessor] - 1] != -1) {
+					todosAntecessoresAlocados = 0;
+					break;
+				}
+			}
+			if (todosAntecessoresAlocados == 1) { // SE TODOS OS ANTECESSORES FORAM ALOCADOS, ALOCA A TAREFA.
+				solucao.ordemTarefa[ordemTarefa] = tarefas[tarefaAtual].numJob;
+				tarefasNaoAlocadas[tarefaAtual] = -1;
+				break;
+			}
+		}
+		int indiceTarefa = solucao.ordemTarefa[ordemTarefa] - 1;
+		posicaoInicialFinalTarefas[indiceTarefa][0] = posicaoInicialFinalTarefas[indiceTarefa - 1][1];
+		posicaoInicialFinalTarefas[indiceTarefa][1] = posicaoInicialFinalTarefas[indiceTarefa][0] + tarefas[indiceTarefa].duration;
+		solucao.ordemTempo[indiceTarefa] = posicaoInicialFinalTarefas[indiceTarefa][0];
+	}
+	posicaoInicialFinalTarefas[numTarefas - 1][0] = posicaoInicialFinalTarefas[numTarefas - 2][1];
+	posicaoInicialFinalTarefas[numTarefas - 1][1] = posicaoInicialFinalTarefas[numTarefas - 1][0] + tarefas[numTarefas - 1].duration;
+	solucao.ordemTempo[numTarefas - 1] = posicaoInicialFinalTarefas[numTarefas - 1][0];
+	solucao.ordemTarefa[numTarefas - 1] = tarefas[numTarefas - 1].numJob;
 }
 
 void lerArquivo(char* file) {
@@ -378,7 +426,7 @@ int isViavel(Solucao solucao) {
 		for (int nTarefa = 0; nTarefa < numTarefas; nTarefa++)
 		{
 			int tempoInicialTarefa = solucao.ordemTempo[nTarefa];
-			for (int tempoRelativo = tempoInicialTarefa; tempoRelativo <= (tempoInicialTarefa + tarefas[nTarefa].duration); tempoRelativo++)
+			for (int tempoRelativo = tempoInicialTarefa; tempoRelativo < (tempoInicialTarefa + tarefas[nTarefa].duration); tempoRelativo++)
 			{
 				vetorRecursosTempo[tempoRelativo][nRecurso] = vetorRecursosTempo[tempoRelativo][nRecurso] + tarefas[nTarefa].vetRecursos[nRecurso];
 			}
@@ -403,6 +451,7 @@ int isViavel(Solucao solucao) {
 		for (int nSucessor = 0; nSucessor < tarefas[nTarefa].numProximos; nSucessor++)
 		{
 			int proximoSucessor = tarefas[nTarefa].vetProximos[nSucessor];
+			if (proximoSucessor = numTarefas) continue; // DESCARTA A ULTIMA TAREFA (sink)
 			if (solucao.ordemTempo[proximoSucessor] <= (solucao.ordemTempo[nTarefa] + tarefas[nTarefa].duration)) { // TEMPO_FINAL_TAREFA >= TEMPO_INICIAL_SUCESSOR ? INVIAVEL : VIAVEL.
 				return 0;
 			}
@@ -446,7 +495,7 @@ void simAnnealing(const double alfa, const double tempInicial, const double temp
 	double temperatura, delta, aux;
 
 	clockInicial = clock();
-	heuristicaConAle(solucao);
+	heuristicaConGul(solucao);
 	calculoFO(solucao);
 	exibirSolucao(solucao);
 	clockFinal = clock();
