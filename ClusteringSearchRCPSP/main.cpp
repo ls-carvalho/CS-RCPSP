@@ -102,7 +102,7 @@ void heuristicaConGul(Solucao& solucao) {
 		for (int tarefaAtual = 1; tarefaAtual < numTarefas-1; tarefaAtual++)
 		{
 			if (tarefasNaoAlocadas[tarefaAtual] == -1) continue; // TAREFA JA FOI ALOCADA. PROXIMA.
-			if (tarefas[tarefaAtual].numAnteriores == 0) { // TAREFA SEM ANTECESSOR PODE E ALOCADA.
+			if (tarefas[tarefaAtual].numAnteriores == 0) { // TAREFA SEM ANTECESSOR PODE SER ALOCADA. (PODE SER QUE ESSE BLOCO SEJA DESNECESSARIO)
 				solucao.ordemTarefa[ordemTarefa] = tarefas[tarefaAtual].numJob;
 				tarefasNaoAlocadas[tarefaAtual] = -1;
 				break;
@@ -121,6 +121,8 @@ void heuristicaConGul(Solucao& solucao) {
 				break;
 			}
 		}
+		// TODO: PROVAVEL LUGAR ONDE PODE SER INSERIDA LOGICA PARA REALIZAR A ALOCACAO "PARALELA" DE JOBS
+		// ALGO COMO "NAO SENDO ANTECESSOR, PODE SER PARALELO"
 		int indiceTarefa = solucao.ordemTarefa[ordemTarefa] - 1;
 		posicaoInicialFinalTarefas[indiceTarefa][0] = posicaoInicialFinalTarefas[indiceTarefa - 1][1];
 		posicaoInicialFinalTarefas[indiceTarefa][1] = posicaoInicialFinalTarefas[indiceTarefa][0] + tarefas[indiceTarefa].duration;
