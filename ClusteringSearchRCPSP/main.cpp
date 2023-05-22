@@ -1,5 +1,12 @@
 #define _CRT_SECURE_NO_WARNINGS
 
+//MATRIZ BINARIA DE TAREFAS X TAREFAS ONDE AS LINHAS SAO SUCESSORAS E AS COLUNAS INDICAM OS ANTECESSORES
+//ESTRUTURA AUXILIAR COM AS POSICOES INICIAIS DO ULTIMO ANTECESSOR E PRIMEIRO SUCESSOR DE CADA TAREFA (PARA TER O RANGE POSSIVEL DE TROCA)
+//ANALISAR FUNC AJUSTAR HORARIOS
+
+//TODOS OS DIAS DE MANHA, MENOS SEGUNDA, APENAS A PARTIR DAS 10H
+//TODOS OS DIAS DE TARDE, MENOS QUARTA E SEXTA
+
 #include <iostream>
 #include <stdlib.h>
 #include <memory>
@@ -393,6 +400,7 @@ void escreverEmArquivo(char* file_name, Solucao solucao) {
 	fclose(fp);
 }
 
+// TODO: REMOVER A VERIFICACAO DE VIABILIDADE QUANDO TUDO ESTIVER GERANDO VIAVEL
 void calculoFO(Solucao& solucao) {
 	int tempoFinal = 0;
 	solucao.makespan = 0;
@@ -413,7 +421,7 @@ void calculoFO(Solucao& solucao) {
 	}
 }
 
-// TODO => REFATORAR
+// TODO => REFATORAR / REMOFER
 int isViavel(Solucao solucao) {
 	for (int nHorizonte = 0; nHorizonte < tempoHorizonte; nHorizonte++)
 	{
