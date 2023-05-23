@@ -1,8 +1,7 @@
 ﻿#pragma once
 
-// TODO => construtiva gulosa => ANALISAR CODIGO PYTHON
-
-// CONSTANTES DE LIMITE PARA VETOR => TODO: AJUSTAR ESSES VALORES PARA OS MAIORES CASOS
+// CONSTANTES DE LIMITES PARA VETORES 
+// TODO: AJUSTAR ESSES VALORES PARA OS MAIORES CASOS
 #define NUM_JOBS 12
 #define NUM_RESOURCES 2
 #define HORIZONTE 35
@@ -35,19 +34,19 @@ int numTarefas;
 int numRecursos;
 int tempoHorizonte;
 long int contador;
-int vetorRecursosTempo[HORIZONTE][NUM_RESOURCES];
-int posicaoInicialFinalTarefas[NUM_JOBS][2]; // 0 = INICIAL / 1 = FINAL
-int matrizAntecessorSucessor[NUM_JOBS][NUM_JOBS]; // TODO => APLICAR. 0 = NULL / 1 = ANTECESSOR / 2 = SUCESSOR
+int matrizTempoRecurso[HORIZONTE][NUM_RESOURCES];
+int matrizTarefasPosicaoInicialFinal[NUM_JOBS][2]; // [0] = INICIAL / [1] = FINAL
+int matrizSucessorAntecessor[NUM_JOBS][NUM_JOBS]; // TODO => IMPLEMENTAR. LINHA = SUCESSOR / COLUNA = ANTECESSOR
 
 // PROTOTIPOS
-void calcularOrdem(Solucao& solucao);
+void reorganizarTempos(Solucao& solucao, int inicio);
+void calcularOrdem(Solucao& solucao, bool recalculo);
 void calcularAntecessores();
 void heuristicaConGul(Solucao& solucao);
 void lerArquivo(char* file_name);
 void lerSolucao(char* file_name, Solucao& solucao);
 void escreverEmArquivo(char* file_name, Solucao solucao);
 void calculoFO(Solucao& solucao);
-int isViavel(Solucao solucao);
 void exibirSolucao(Solucao& solucao);
 void clonar(Solucao& solucaoC, Solucao& solucaoV);
 void gerarVizinho(Solucao& solucao);
