@@ -1,9 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 // OBJETIVOS ATUAIS:
-//	IMPLEMENTAR MATRIZ BINARIA DE TAREFAS X TAREFAS ONDE AS LINHAS SAO SUCESSORAS E AS COLUNAS INDICAM OS ANTECESSORES
-//	IMPLEMENTAR ESTRUTURA AUXILIAR COM AS POSICOES INICIAIS DO ULTIMO ANTECESSOR E PRIMEIRO SUCESSOR DE CADA TAREFA (PARA TER O RANGE POSSIVEL DE TROCA)
-//	IMPLEMENTAR FUNCOES DE ATUALIZACAO DAS ESTRUTURAS AUX
+//	IMPLEMENTAR GERACAO DE VIZINHOS
 
 // HORARIOS DO ORIENTADOR:
 //	TODOS OS DIAS DE MANHA, MENOS SEGUNDA, QUE PODE A PARTIR DAS 10H
@@ -23,8 +21,6 @@
 
 // PARAMETROS:
 #define SA_MAX 3
-// #define SEED 10 // TODO => REMOVER
-// #define PENALIDADE_INVIABILIDADE 1.2 // TODO => REMOVER
 
 int main()
 {
@@ -54,6 +50,43 @@ int main()
 	exibirSolucao(solucao);
 	escreverEmArquivo(escrita, solucao);
 	system("pause");
+}
+
+void gerarEstruturasAuxiliares() {
+	// INICIALIZA AS MATRIZES COMO 0
+	for (int x = 0; x < numTarefas; x++)
+	{
+		for (int j = 0; j < numTarefas; j++)
+		{
+			matrizSucessorAntecessor[x][j] = 0;
+		}
+		matrizRangeAntecessorSucessorTarefa[x][0] = 0;
+		matrizRangeAntecessorSucessorTarefa[x][1] = 0;
+	}
+	for (int indiceTarefa = 0; indiceTarefa < numTarefas; indiceTarefa++)
+	{
+		int minInicioProx = 0, maxFinalAnt = 0;
+		for (int indiceProximo = 0; indiceProximo < tarefas[indiceTarefa].numProximos; indiceProximo++)
+		{
+			// CONSTROI A MATRIZ AUXILIAR BINARIA DOS SUCESSORES E ANTECESSORES
+			int nProximo = tarefas[indiceTarefa].vetProximos[indiceProximo];
+			matrizSucessorAntecessor[indiceTarefa][nProximo - 1] = 1;
+			// CONSTROI A MATRIZ AUXILIAR COM OS TEMPOS MINIMOS DOS SUCESSORES
+			if (minInicioProx < matrizTarefasPosicaoInicialFinal[nProximo - 1][0]) {
+				minInicioProx = matrizTarefasPosicaoInicialFinal[nProximo - 1][0];
+			}
+		}
+		for (int indiceAnteriores = 0; indiceAnteriores < tarefas[indiceTarefa].numAnteriores; indiceAnteriores++)
+		{
+			int nAnterior = tarefas[indiceTarefa].vetAnteriores[indiceAnteriores];
+			// CONSTROI A MATRIZ AUXILIAR COM OS TEMPOS MAXIMOS DOS ANTECESSORES
+			if (maxFinalAnt < matrizTarefasPosicaoInicialFinal[nAnterior - 1][1]) {
+				maxFinalAnt = matrizTarefasPosicaoInicialFinal[nAnterior - 1][1];
+			}
+		}
+		matrizRangeAntecessorSucessorTarefa[indiceTarefa][1] = minInicioProx;
+		matrizRangeAntecessorSucessorTarefa[indiceTarefa][0] = maxFinalAnt;
+	}
 }
 
 // TODO => ADICIONAR PARAMETRO DE MOMENTO DE INICIO DE CALCULO (MENOR INDICE QUE SOFREU ALTERACAO)
@@ -228,6 +261,7 @@ void heuristicaConGul(Solucao& solucao) {
 	solucao.ordemTempo[numTarefas - 1] = matrizTarefasPosicaoInicialFinal[numTarefas - 1][0];
 	solucao.ordemTarefa[numTarefas - 1] = tarefas[numTarefas - 1].numJob;
 	reorganizarTempos(solucao, 0);
+	gerarEstruturasAuxiliares();
 }
 
 void lerArquivo(char* file) {

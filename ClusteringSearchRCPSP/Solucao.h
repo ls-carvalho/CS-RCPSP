@@ -36,9 +36,11 @@ int tempoHorizonte;
 long int contador;
 int matrizTempoRecurso[HORIZONTE][NUM_RESOURCES];
 int matrizTarefasPosicaoInicialFinal[NUM_JOBS][2]; // [0] = INICIAL / [1] = FINAL
-int matrizSucessorAntecessor[NUM_JOBS][NUM_JOBS]; // TODO => IMPLEMENTAR. LINHA = SUCESSOR / COLUNA = ANTECESSOR
+int matrizSucessorAntecessor[NUM_JOBS][NUM_JOBS]; // LINHA = SUCESSOR / COLUNA = ANTECESSOR
+int matrizRangeAntecessorSucessorTarefa[NUM_JOBS][2]; // [0] = ANTECESSOR / [1] = SUCESSOR
 
 // PROTOTIPOS
+void gerarEstruturasAuxiliares();
 void reorganizarTempos(Solucao& solucao, int inicio);
 void calcularOrdem(Solucao& solucao, bool recalculo);
 void calcularAntecessores();
