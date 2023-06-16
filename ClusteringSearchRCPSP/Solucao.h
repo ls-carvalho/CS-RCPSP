@@ -1,14 +1,14 @@
 ﻿#pragma once
 
 // CONSTANTES DE LIMITES PARA VETORES 
-// TODO: AJUSTAR ESSES VALORES PARA OS MAIORES CASOS
+// TODO => AJUSTAR ESSES VALORES PARA OS MAIORES CASOS
 #define NUM_JOBS 12
 #define NUM_RESOURCES 2
 #define HORIZONTE 35
 
 // DADOS DA SOLUCAO
 struct sSolucao {
-	int ordemTempo[NUM_JOBS]; // VETOR COM OS TEMPOS INICIAIS, ORDENADO PELO INDICE DA TAREFA
+	int tempoTarefa[NUM_JOBS]; // VETOR COM OS TEMPOS INICIAIS, ORDENADO PELO INDICE DA TAREFA
 	int ordemTarefa[NUM_JOBS]; // VETOR COM AS TAREFAS, ORDENADO PELA ORDEM DE TEMPOS INCIAIS
 	int makespan;
 	int ResultFO;
@@ -36,17 +36,18 @@ int tempoHorizonte;
 long int contador;
 int matrizTempoRecurso[HORIZONTE][NUM_RESOURCES];
 int matrizTarefasPosicaoInicialFinal[NUM_JOBS][2]; // [0] = INICIAL / [1] = FINAL
-int matrizSucessorAntecessor[NUM_JOBS][NUM_JOBS]; // LINHA = SUCESSOR / COLUNA = ANTECESSOR
-int matrizRangeAntecessorSucessorTarefa[NUM_JOBS][2]; // [0] = ANTECESSOR / [1] = SUCESSOR
+int matrizSucessorAntecessor[NUM_JOBS][NUM_JOBS]; // [LINHA] = SUCESSORES / [COLUNA] = ANTECESSORES
+int matrizPosicaoIntervaloAntecessorSucessorTarefa[NUM_JOBS][2]; // [0] = ANTECESSOR / [1] = SUCESSOR
 
 // PROTOTIPOS
-void gerarEstruturasAuxiliares();
+int calculaPosicao(Solucao& solucao, int nTarefa);
+int isViavel(Solucao& solucao);
+void calcularEstruturasAuxiliares(Solucao& solucao);
 void reorganizarTempos(Solucao& solucao, int inicio);
-void calcularOrdem(Solucao& solucao, bool recalculo);
+void calcularOrdem(Solucao& solucao);
 void calcularAntecessores();
 void heuristicaConGul(Solucao& solucao);
 void lerArquivo(char* file_name);
-void lerSolucao(char* file_name, Solucao& solucao);
 void escreverEmArquivo(char* file_name, Solucao solucao);
 void calculoFO(Solucao& solucao);
 void exibirSolucao(Solucao& solucao);
