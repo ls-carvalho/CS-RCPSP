@@ -12,6 +12,10 @@ struct sSolucao {
 	int ordemTarefa[NUM_JOBS]; // VETOR COM AS TAREFAS, ORDENADO PELA ORDEM DE TEMPOS INCIAIS
 	int makespan;
 	int ResultFO;
+	// AUXILIARES
+	int matrizTempoRecurso[HORIZONTE][NUM_RESOURCES];
+	int matrizTarefasPosicaoInicialFinal[NUM_JOBS][2]; // [0] = INICIAL | [1] = FINAL
+	int matrizPosicaoIntervaloAntecessorSucessorTarefa[NUM_JOBS][2]; // [0] = ANTECESSOR | [1] = SUCESSOR
 };
 typedef struct sSolucao Solucao;
 
@@ -36,9 +40,6 @@ int matrizIndiceSucessorAntecessor[NUM_JOBS][NUM_JOBS]; // BINÁRIA: [X][TAREFA]
 
 /// MUTAVEIS
 long int contador;
-int matrizTempoRecurso[HORIZONTE][NUM_RESOURCES];
-int matrizTarefasPosicaoInicialFinal[NUM_JOBS][2]; // [0] = INICIAL | [1] = FINAL
-int matrizPosicaoIntervaloAntecessorSucessorTarefa[NUM_JOBS][2]; // [0] = ANTECESSOR | [1] = SUCESSOR
 
 // PROTÓTIPOS
 void calcularEstruturasAuxiliares(Solucao& solucao);
