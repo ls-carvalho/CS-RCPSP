@@ -2,10 +2,7 @@
 
 // OBJETIVOS ATUAIS:
 //	IMPLEMENTAR GERACAO DE VIZINHOS
-
-// HORARIOS DO ORIENTADOR:
-//	TODOS OS DIAS DE MANHA, MENOS SEGUNDA, QUE PODE A PARTIR DAS 10H
-//	TODOS OS DIAS DE TARDE, MENOS QUARTA E SEXTA
+//	REFATORAR A REORGANIZAÇÃO DE TEMPOS
 
 #include <iostream>
 #include <stdlib.h>
@@ -14,10 +11,14 @@
 #include <math.h>
 #include "Solucao.h"
 
+// DEFINE BOOLEAN | TODO => APLICAR
+#define TRUE 1
+#define FALSE 1
+
 // OPÇÕES:
 //#define EXIBIR_MELHOR
-//#define MODO_DBGHEU
-#define MODO_OPERARACAO
+#define MODO_DBGHEU
+//#define MODO_OPERARACAO
 
 // PARAMETROS:
 #define SA_MAX 3
@@ -64,13 +65,13 @@ int isViavel(Solucao& solucao) {
 	// VARRE O VETOR DE TAREFAS
 	for (int indiceTarefa = 0; indiceTarefa < numTarefas; indiceTarefa++)
 	{
-		if (solucao.matrizTarefasPosicaoInicialFinal[indiceTarefa][1] > tempoHorizonte) { // TEMPO_FINAL_TAREFA > HORIZONTE
+		if (solucao.matrizTempoInicialFinalTarefa[indiceTarefa][1] > tempoHorizonte) { // TEMPO_FINAL_TAREFA > HORIZONTE
 			return 0;
 		}
 		for (int indiceSucessor = 1; indiceSucessor < numTarefas - 1; indiceSucessor++)
 		{
 			// TEMPO_INICIAL_SUCESSOR <= TEMPO_FINAL_TAREFA ? INVIAVEL : VIAVEL.
-			if (solucao.matrizTarefasPosicaoInicialFinal[indiceSucessor][0] < solucao.matrizTarefasPosicaoInicialFinal[indiceTarefa][1]) {
+			if (solucao.matrizTempoInicialFinalTarefa[indiceSucessor][0] < solucao.matrizTempoInicialFinalTarefa[indiceTarefa][1]) {
 				return 0;
 			}
 		}
@@ -90,88 +91,87 @@ int calcularPosicao(Solucao& solucao, int nTarefa) {
 	return posicao;
 }
 
-void calcularEstruturasAuxiliares(Solucao& solucao) {
+void calcularMatrizTempoUltimoAntecessorPrimeiroSucessorTarefa(Solucao& solucao) {
 	// INICIALIZA AS MATRIZES
-	memset(solucao.matrizPosicaoIntervaloAntecessorSucessorTarefa, 0, sizeof(solucao.matrizPosicaoIntervaloAntecessorSucessorTarefa));
-	solucao.matrizPosicaoIntervaloAntecessorSucessorTarefa[0][0] = 1;
-	solucao.matrizPosicaoIntervaloAntecessorSucessorTarefa[0][1] = 1;
+	memset(solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa, 0, sizeof(solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa));
+	solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[0][0] = 0;
+	solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[0][1] = 0;
 	// PULA A PRIMEIRA TAREFA (INICIO 0, DURAÇÃO 0, INTERVALO 0)
 	for (int indiceTarefa = 1; indiceTarefa < numTarefas; indiceTarefa++)
 	{
-		int minInicioProx = tempoHorizonte - 1, maxFinalAnt = 0, minPosProx = numTarefas, maxPosAnt = 1;
+		int menorTempoInicioSucessor = tempoHorizonte, maiorTempoFinalAntecessor = 0;
 		// CALCULA UPPER BOUND, OU SEJA, MENOR TEMPO DE INICIO DENTRE OS SUCESSORES
 		for (int indiceSucessor = 0; indiceSucessor < numTarefas; indiceSucessor++)
 		{
-			if (matrizIndiceSucessorAntecessor[indiceTarefa][indiceSucessor] == 1 && minInicioProx > solucao.matrizTarefasPosicaoInicialFinal[indiceSucessor][0]) {
-				minInicioProx = solucao.matrizTarefasPosicaoInicialFinal[indiceSucessor][0];
-				minPosProx = calcularPosicao(solucao, indiceSucessor + 1);
+			if (matrizIndiceSucessorAntecessor[indiceTarefa][indiceSucessor] == 1 && menorTempoInicioSucessor > solucao.matrizTempoInicialFinalTarefa[indiceSucessor][0]) {
+				menorTempoInicioSucessor = solucao.matrizTempoInicialFinalTarefa[indiceSucessor][0];
 			}
 		}
 		// CALCULA LOWER BOUND, OU SEJA, MAIOR TEMPO DE FIM DENTRE OS ANTECESSORES | TODO => REFATORAR
 		for (int indiceAntecessor = 0; indiceAntecessor < numTarefas; indiceAntecessor++)
 		{
-			if (matrizIndiceSucessorAntecessor[indiceAntecessor][indiceTarefa] == 1 && maxFinalAnt < solucao.matrizTarefasPosicaoInicialFinal[indiceAntecessor][1]) {
-				maxFinalAnt = solucao.matrizTarefasPosicaoInicialFinal[indiceAntecessor][1];
-				maxPosAnt = calcularPosicao(solucao, indiceAntecessor + 1);
+			if (matrizIndiceSucessorAntecessor[indiceAntecessor][indiceTarefa] == 1 && maiorTempoFinalAntecessor < solucao.matrizTempoInicialFinalTarefa[indiceAntecessor][1]) {
+				maiorTempoFinalAntecessor = solucao.matrizTempoInicialFinalTarefa[indiceAntecessor][1];
 			}
 		}
-		solucao.matrizPosicaoIntervaloAntecessorSucessorTarefa[indiceTarefa][1] = minPosProx - 1;
-		solucao.matrizPosicaoIntervaloAntecessorSucessorTarefa[indiceTarefa][0] = maxPosAnt + 1;
+		solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[indiceTarefa][0] = maiorTempoFinalAntecessor;
+		solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[indiceTarefa][1] = menorTempoInicioSucessor;
 	}
-	// ATUALIZA A POSIÇÃO FINAL DA ULTIMA TAREFA
-	solucao.matrizPosicaoIntervaloAntecessorSucessorTarefa[numTarefas - 1][1] = solucao.matrizPosicaoIntervaloAntecessorSucessorTarefa[numTarefas - 1][0];
+	// ATUALIZA A POSIÇÃO FINAL DA ULTIMA TAREFA (OVERRIDE EM TEMPO HORIZONTE)
+	solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[numTarefas - 1][1] = solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[numTarefas - 1][0];
 }
 
-void reorganizarTempos(Solucao& solucao, int inicio) {
+// TODO => TENTAR APLICAR indiceOrdem = inicio
+// NOTAS DE REFATORAÇÃO:
+//  ESSA FUNÇÃO PRECISA DE SER REFATORADA PARA SER UTILIZADA DEPOIS QUE A MATRIZ DE TEMPO JÁ ESTEJA PREENCHIDA,
+//  ISSO SIGNIFICA QUE A LÓGICA DE COMPARAÇÃO DA LINHA 151 TEM QUE CONTAR COM A TAREFA POSSIVELMENTE COMPUTADA
+void reorganizarTempos(Solucao& solucao) {
 	// INICIALIZA A MATRIZ TEMPOxRECURSO
 	memset(solucao.matrizTempoRecurso, 0, sizeof(solucao.matrizTempoRecurso));
 	// AJUSTA OS HORARIOS, SEGUINDO ORDEM DA SOLUCAO (IGNORANDO A PRIMEIRA E A ULTIMA TAREFA => 1 ATÉ N-1)
-	for (int indiceOrdem = 1; indiceOrdem < (numTarefas - 1); indiceOrdem++) // TODO => APLICAR indiceOrdem = inicio
+	for (int indiceOrdem = 1; indiceOrdem < (numTarefas - 1); indiceOrdem++)
 	{
 		int nTarefa = solucao.ordemTarefa[indiceOrdem];
-		// DEFINE O MAIOR HORARIO DE FIM DOS PREDECESSORES
-		int tempoInicial = 0;
-		for (int indiceAntecessor = 0; indiceAntecessor < numTarefas; indiceAntecessor++)
-		{
-			if(matrizIndiceSucessorAntecessor[indiceAntecessor][nTarefa - 1] == 1 && solucao.matrizTarefasPosicaoInicialFinal[indiceAntecessor][1] > tempoInicial) {
-				tempoInicial = solucao.matrizTarefasPosicaoInicialFinal[indiceAntecessor][1];
-			}
-		}
-		// DEFINE O TEMPO QUE POSSUI RECURSO DISPONÍVEL
-		int recDisponivel = 0;
-		while (recDisponivel == 0) {
-			recDisponivel = 1;
+		int indiceTarefa = nTarefa - 1;
+		// DEFINE O MAIOR HORARIO DE FIM DOS ANTECESSORES
+		int tempoInicialDisponivel = solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[indiceTarefa][0];
+		// TENTA ENCONTRAR UM TEMPO COM RECURSO DISPONIVEL PARA TODA A DURAÇÃO DA TAREFA
+		int hasRecursoDisponivelNoTempoAtual = 0;
+		while (hasRecursoDisponivelNoTempoAtual == 0) {
+			hasRecursoDisponivelNoTempoAtual = 1;
 			for (int indiceRecurso = 0; indiceRecurso < numRecursos; indiceRecurso++)
 			{
-				if (tarefas[nTarefa - 1].vetRecursos[indiceRecurso] == 0) {
+				if (tarefas[indiceTarefa].vetRecursos[indiceRecurso] == 0) {
 					continue;
 				}
 				else {
-					int dentroLimiteRecurso = 1;
-					for (int tempoRecurso = tempoInicial; tempoRecurso < (tempoInicial + tarefas[nTarefa - 1].duration); tempoRecurso++)
+					int isDentroLimiteRecurso = 1;
+					for (int tempoRecurso = tempoInicialDisponivel; tempoRecurso < (tempoInicialDisponivel + tarefas[indiceTarefa].duration); tempoRecurso++)
 					{
-						if (solucao.matrizTempoRecurso[tempoRecurso][indiceRecurso] + tarefas[nTarefa - 1].vetRecursos[indiceRecurso] > recursosDisponiveis[indiceRecurso]) {
-							dentroLimiteRecurso = 0;
+						if (solucao.matrizTempoRecurso[tempoRecurso][indiceRecurso] + tarefas[indiceTarefa].vetRecursos[indiceRecurso] > recursosDisponiveis[indiceRecurso]) {
+							isDentroLimiteRecurso = 0;
 							break;
 						}
 					}
-					if (dentroLimiteRecurso == 0) {
-						tempoInicial = tempoInicial + 1;
-						recDisponivel = 0;
+					if (isDentroLimiteRecurso == 0) {
+						tempoInicialDisponivel += 1;
+						hasRecursoDisponivelNoTempoAtual = 0;
 						break;
 					}
 				}
 			}
 		}
+		// TODO => CRIAR METODO PARA ALTERAR TODAS AS ESTRUTURAS SIMULTANEAMENTE
 		// DEFINE OS NOVOS TEMPOS DE INICIO E FIM DA TAREFA
-		solucao.tempoTarefa[nTarefa - 1] = tempoInicial;
-		solucao.matrizTarefasPosicaoInicialFinal[nTarefa - 1][0] = solucao.tempoTarefa[nTarefa - 1];
-		solucao.matrizTarefasPosicaoInicialFinal[nTarefa - 1][1] = solucao.tempoTarefa[nTarefa - 1] + tarefas[nTarefa - 1].duration;
+		solucao.tempoTarefa[nTarefa - 1] = tempoInicialDisponivel;
+		solucao.matrizTempoInicialFinalTarefa[nTarefa - 1][0] = solucao.tempoTarefa[nTarefa - 1];
+		solucao.matrizTempoInicialFinalTarefa[nTarefa - 1][1] = solucao.tempoTarefa[nTarefa - 1] + tarefas[nTarefa - 1].duration;
+		// TODO => EXTRAIR METODO E ANALISAR SE PODE SER CALCULADA ANTES DO INICIO DA REORGANIZACAO DOS TEMPOS
 		// ATUALIZA A MATRIZ DE TEMPOxRECURSO
 		for (int indiceRecurso = 0; indiceRecurso < numRecursos; indiceRecurso++)
 		{
 			if (tarefas[nTarefa - 1].vetRecursos[indiceRecurso] != 0) {
-				for (int tempo = solucao.matrizTarefasPosicaoInicialFinal[nTarefa - 1][0]; tempo < solucao.matrizTarefasPosicaoInicialFinal[nTarefa - 1][1]; tempo++)
+				for (int tempo = solucao.matrizTempoInicialFinalTarefa[nTarefa - 1][0]; tempo < solucao.matrizTempoInicialFinalTarefa[nTarefa - 1][1]; tempo++)
 				{
 					solucao.matrizTempoRecurso[tempo][indiceRecurso] += tarefas[nTarefa - 1].vetRecursos[indiceRecurso];
 				}
@@ -182,20 +182,19 @@ void reorganizarTempos(Solucao& solucao, int inicio) {
 	int maiorTempoFim = 0;
 	for (int indiceTarefa = 0; indiceTarefa < (numTarefas - 1); indiceTarefa++)
 	{
-		if (maiorTempoFim < solucao.matrizTarefasPosicaoInicialFinal[indiceTarefa][1]) {
-			maiorTempoFim = solucao.matrizTarefasPosicaoInicialFinal[indiceTarefa][1];
+		if (maiorTempoFim < solucao.matrizTempoInicialFinalTarefa[indiceTarefa][1]) {
+			maiorTempoFim = solucao.matrizTempoInicialFinalTarefa[indiceTarefa][1];
 		}
 	}
 	if (numTarefas - 1 >= 0) {
-		solucao.matrizTarefasPosicaoInicialFinal[numTarefas - 1][0] = maiorTempoFim;
-		solucao.matrizTarefasPosicaoInicialFinal[numTarefas - 1][1] = maiorTempoFim;
+		solucao.matrizTempoInicialFinalTarefa[numTarefas - 1][0] = maiorTempoFim;
+		solucao.matrizTempoInicialFinalTarefa[numTarefas - 1][1] = maiorTempoFim;
 		solucao.tempoTarefa[numTarefas - 1] = maiorTempoFim;
 	}
 	else {
 		std::cout << "BUFFER OVERRUN: numTarefas - 1 = " << numTarefas - 1 << std::endl;
 	}
 	calcularOrdem(solucao);
-	calcularEstruturasAuxiliares(solucao);
 }
 
 void calcularOrdem(Solucao& solucao) {
@@ -224,9 +223,10 @@ void calcularMatrizBinariaAntecessoresSucessores() {
 	}
 }
 
-int calcularNumeroAntecessoresIndice(int indiceTarefaAlvo) {
+int calcularNumeroAntecessoresNaoAlocadosIndice(int indiceTarefaAlvo) {
 	int resultado = 0;
-	for (int indiceTarefaAtual = 0; indiceTarefaAtual < numTarefas; indiceTarefaAtual++)
+	// PULA A PRIMEIRA TAREFA, QUE FOI ALOCADA MANUALMENTE
+	for (int indiceTarefaAtual = 1; indiceTarefaAtual < numTarefas; indiceTarefaAtual++)
 	{
 		if (matrizIndiceSucessorAntecessor[indiceTarefaAtual][indiceTarefaAlvo] == 1) resultado++;
 	}
@@ -236,66 +236,61 @@ int calcularNumeroAntecessoresIndice(int indiceTarefaAlvo) {
 void heuristicaConGul(Solucao& solucao) {
 	// INICIALIZA AS VARIAVEIS
 	solucao.makespan = 0;
-	solucao.ResultFO = 0;
-	memset(solucao.tempoTarefa, -1, sizeof(solucao.tempoTarefa)); // TODO => REVISAR NECESSIDADE
+	solucao.resultFO = 0;
+	memset(solucao.tempoTarefa, -1, sizeof(solucao.tempoTarefa));
 	memset(solucao.ordemTarefa, -1, sizeof(solucao.ordemTarefa));
-	solucao.tempoTarefa[0] = 0; // TODO => REVISAR NECESSIDADE
-	// ALOCA PRIMEIRA E ULTIMA TAREFAS
+	// ALOCA PRIMEIRA
+	solucao.tempoTarefa[0] = 0;
 	solucao.ordemTarefa[0] = 1;
 	solucao.ordemTarefa[numTarefas - 1] = numTarefas;
 	calcularMatrizBinariaAntecessoresSucessores();
 	int numeroTarefasAntecessorasNaoAlocadas[NUM_JOBS];
 	numeroTarefasAntecessorasNaoAlocadas[0] = -1;
-	numeroTarefasAntecessorasNaoAlocadas[numTarefas - 1] = -1;
 	for (int indiceTarefa = 1; indiceTarefa < numTarefas; indiceTarefa++)
 	{
-		numeroTarefasAntecessorasNaoAlocadas[indiceTarefa] = calcularNumeroAntecessoresIndice(indiceTarefa);
+		numeroTarefasAntecessorasNaoAlocadas[indiceTarefa] = calcularNumeroAntecessoresNaoAlocadosIndice(indiceTarefa);
 	}
-	solucao.matrizTarefasPosicaoInicialFinal[0][0] = 0;
-	solucao.matrizTarefasPosicaoInicialFinal[0][1] = 0;
-	for (int indiceOrdemTarefa = 1; indiceOrdemTarefa < numTarefas - 1; indiceOrdemTarefa++)
+	solucao.matrizTempoInicialFinalTarefa[0][0] = 0;
+	solucao.matrizTempoInicialFinalTarefa[0][1] = 0;
+	for (int indiceOrdemTarefa = 1; indiceOrdemTarefa < numTarefas - 1; indiceOrdemTarefa++) // -1?
 	{
-		for (int indiceTarefaAtual = 1; indiceTarefaAtual < numTarefas - 1; indiceTarefaAtual++)
+		for (int indiceTarefaAtual = 1; indiceTarefaAtual < numTarefas - 1; indiceTarefaAtual++) // -1?
 		{
 			// SE A TAREFA JA FOI ALOCADA, PASSA PARA A PROXIMA.
 			if (numeroTarefasAntecessorasNaoAlocadas[indiceTarefaAtual] == -1) {
 				continue;
 			}
-			int todosAntecessoresAlocados = 1;
-			for (int indiceAntecessor = 0; indiceAntecessor < numTarefas; indiceAntecessor++)
-			{
-				if (matrizIndiceSucessorAntecessor[indiceAntecessor][indiceTarefaAtual] == 1) {
-					if (numeroTarefasAntecessorasNaoAlocadas[indiceAntecessor] != -1) {
-						todosAntecessoresAlocados = 0;
-						break;
-					}
-				}
-			}
 			// SE TODOS OS ANTECESSORES FORAM ALOCADOS, ALOCA A TAREFA.
-			if (todosAntecessoresAlocados == 1) {
+			if (numeroTarefasAntecessorasNaoAlocadas[indiceTarefaAtual] == 0) {
 				solucao.ordemTarefa[indiceOrdemTarefa] = tarefas[indiceTarefaAtual].numJob;
 				numeroTarefasAntecessorasNaoAlocadas[indiceTarefaAtual] = -1;
+				for (int indiceProximo = 0; indiceProximo < tarefas[indiceTarefaAtual].numProximos; indiceProximo++)
+				{
+					int indiceSucessor = tarefas[indiceTarefaAtual].vetProximos[indiceProximo] - 1;
+					numeroTarefasAntecessorasNaoAlocadas[indiceSucessor] -= 1;
+				}
 				break;
 			}
 		}
 		int indiceTarefa = solucao.ordemTarefa[indiceOrdemTarefa] - 1;
-		// POSIÇÃO INICIAL = POSIÇÃO FINAL DA TAREFA ANTERIOR (EM QUESTÃO DE ORDEM)
-		solucao.matrizTarefasPosicaoInicialFinal[indiceTarefa][0] = solucao.matrizTarefasPosicaoInicialFinal[indiceOrdemTarefa - 1][1];
-		// POSIÇÃO FINAL = POSIÇÃO INICIAL + DURAÇÃO
-		solucao.matrizTarefasPosicaoInicialFinal[indiceTarefa][1] = solucao.matrizTarefasPosicaoInicialFinal[indiceTarefa][0] + tarefas[indiceTarefa].duration;
-		solucao.tempoTarefa[indiceTarefa] = solucao.matrizTarefasPosicaoInicialFinal[indiceTarefa][0]; // TODO => REVISAR NECESSIDADE
+		// TEMPO INICIAL = TEMPO FINAL DA TAREFA ANTERIOR
+		solucao.matrizTempoInicialFinalTarefa[indiceTarefa][0] = solucao.matrizTempoInicialFinalTarefa[indiceOrdemTarefa - 1][1];
+		// TEMPO FINAL = TEMPO INICIAL + DURAÇÃO
+		solucao.matrizTempoInicialFinalTarefa[indiceTarefa][1] = solucao.matrizTempoInicialFinalTarefa[indiceTarefa][0] + tarefas[indiceTarefa].duration;
+		solucao.tempoTarefa[indiceTarefa] = solucao.matrizTempoInicialFinalTarefa[indiceTarefa][0];
 	}
 	// POSIÇÃO INICIAL DA TEREFA FINAL = POSIÇÃO FINAL DA TAREFA ANTERIOR À FINAL
 	if (numTarefas - 2 >= 0) {
-		solucao.matrizTarefasPosicaoInicialFinal[numTarefas - 1][0] = solucao.matrizTarefasPosicaoInicialFinal[numTarefas - 2][1];
+		solucao.matrizTempoInicialFinalTarefa[numTarefas - 1][0] = solucao.matrizTempoInicialFinalTarefa[numTarefas - 2][1];
 	}
 	else {
 		std::cout << "BUFFER OVERRUN: numTarefas - 2 = " << numTarefas - 2 << std::endl;
 	}
 	// POSIÇÃO FINAL DA TEREFA FINAL = POSIÇÃO INICIAL DA TEREFA FINAL (SEM DURAÇÃO)
-	solucao.matrizTarefasPosicaoInicialFinal[numTarefas - 1][1] = solucao.matrizTarefasPosicaoInicialFinal[numTarefas - 1][0];
-	solucao.tempoTarefa[numTarefas - 1] = solucao.matrizTarefasPosicaoInicialFinal[numTarefas - 1][0]; // TODO => REVISAR NECESSIDADE
-	reorganizarTempos(solucao, 1);
+	solucao.matrizTempoInicialFinalTarefa[numTarefas - 1][1] = solucao.matrizTempoInicialFinalTarefa[numTarefas - 1][0];
+	solucao.tempoTarefa[numTarefas - 1] = solucao.matrizTempoInicialFinalTarefa[numTarefas - 1][0];
+	calcularMatrizTempoUltimoAntecessorPrimeiroSucessorTarefa(solucao);
+	reorganizarTempos(solucao);
 }
 
 void lerArquivo(char* file) {
@@ -453,7 +448,7 @@ void escreverEmArquivo(char* file_name, Solucao solucao) {
 	}
 	// ESCREVENDO A FO
 	strcpy(linha, "FO: ");
-	_itoa(solucao.ResultFO, aux, 10);
+	_itoa(solucao.resultFO, aux, 10);
 	strcat(linha, aux);
 	strcat(linha, "\n");
 	fputs(linha, fp);
@@ -489,7 +484,7 @@ void escreverEmArquivo(char* file_name, Solucao solucao) {
 void calcularFO(Solucao& solucao) {
 	int tempoFinal = 0;
 	solucao.makespan = 0;
-	solucao.ResultFO = 0;
+	solucao.resultFO = 0;
 	// CALCULO DE MAKESPAN E FO
 	for (int nTarefa = 0; nTarefa < numTarefas; nTarefa++) {
 		tempoFinal = solucao.tempoTarefa[nTarefa] + tarefas[nTarefa].duration;
@@ -497,11 +492,11 @@ void calcularFO(Solucao& solucao) {
 			solucao.makespan = tempoFinal;
 		}
 	}
-	solucao.ResultFO = solucao.makespan;
+	solucao.resultFO = solucao.makespan;
 }
 
 void exibirSolucao(Solucao& solucao) {
-	std::cout << "FO: " << solucao.ResultFO << std::endl;
+	std::cout << "FO: " << solucao.resultFO << std::endl;
 	std::cout << "Makespan: " << solucao.makespan << std::endl;
 	for (int nTarefa = 0; nTarefa < numTarefas; nTarefa++)
 	{
@@ -521,8 +516,8 @@ void gerarVizinho(Solucao& solucao) {
 	tarefasUteis = numTarefas - 2;
 	// OBTEM RESULTADO ENTRE 1 E N-2
 	indiceAleatorio = rand() % tarefasUteis + 1;
-	posicaoMaximaInferior = solucao.matrizPosicaoIntervaloAntecessorSucessorTarefa[indiceAleatorio][0];
-	posicaoMinimaSuperior = solucao.matrizPosicaoIntervaloAntecessorSucessorTarefa[indiceAleatorio][1];
+	posicaoMaximaInferior = solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[indiceAleatorio][0];
+	posicaoMinimaSuperior = solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[indiceAleatorio][1];
 	//if (posicaoMaximaInferior == 1) posicaoMaximaInferior++;
 	//if (posicaoMinimaSuperior == numTarefas - 1) posicaoMinimaSuperior--;
 	// distanciaTroca = posicaoMinimaSuperior - posicaoMaximaInferior + 1;
@@ -547,7 +542,7 @@ void gerarVizinho(Solucao& solucao) {
 	else {
 		menorIndice = indiceAlvo;
 	}
-	reorganizarTempos(solucao, menorIndice);
+	reorganizarTempos(solucao);
 	calcularFO(solucao);
 }
 
@@ -574,10 +569,10 @@ void simAnnealing(const double alfa, const double tempInicial, const double temp
 				memcpy(&solucaoVizinha, &solucaoAtual, sizeof(solucaoVizinha));
 				gerarVizinho(solucaoVizinha);
 				contador++;
-				delta = solucaoVizinha.ResultFO - solucaoAtual.ResultFO;
+				delta = solucaoVizinha.resultFO - solucaoAtual.resultFO;
 				if (delta < 0) {
 					memcpy(&solucaoAtual, &solucaoVizinha, sizeof(solucaoAtual));
-					if (solucaoVizinha.ResultFO < solucao.ResultFO) {
+					if (solucaoVizinha.resultFO < solucao.resultFO) {
 						memcpy(&solucao, &solucaoVizinha, sizeof(solucao));
 						clockFinal = clock();
 						tempoMelhor = ((double)(clockFinal - clockInicial)) / CLOCKS_PER_SEC;

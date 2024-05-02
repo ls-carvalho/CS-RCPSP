@@ -11,11 +11,11 @@ struct sSolucao {
 	int tempoTarefa[NUM_JOBS]; // VETOR COM OS TEMPOS INICIAIS, ORDENADO PELO INDICE DA TAREFA | TODO => VERIFICAR NECESSIDADE
 	int ordemTarefa[NUM_JOBS]; // VETOR COM AS TAREFAS, ORDENADO PELA ORDEM DE TEMPOS INCIAIS
 	int makespan;
-	int ResultFO;
+	int resultFO;
 	// AUXILIARES
 	int matrizTempoRecurso[HORIZONTE][NUM_RESOURCES];
-	int matrizTarefasPosicaoInicialFinal[NUM_JOBS][2]; // [0] = INICIAL | [1] = FINAL
-	int matrizPosicaoIntervaloAntecessorSucessorTarefa[NUM_JOBS][2]; // [0] = ANTECESSOR | [1] = SUCESSOR
+	int matrizTempoInicialFinalTarefa[NUM_JOBS][2]; // [0] = INICIAL | [1] = FINAL
+	int matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[NUM_JOBS][2]; // [0] = ULTIMO ANTECESSOR | [1] = PRIMEIRO SUCESSOR
 };
 typedef struct sSolucao Solucao;
 
@@ -37,15 +37,14 @@ int numTarefas;
 int numRecursos;
 int tempoHorizonte;
 int matrizIndiceSucessorAntecessor[NUM_JOBS][NUM_JOBS]; // BINÁRIA: [X][TAREFA] = ANTECESSOR | [TAREFA][Y] = SUCESSOR
-
 /// MUTAVEIS
 long int contador;
 
 // PROTÓTIPOS
-void calcularEstruturasAuxiliares(Solucao& solucao);
+void calcularMatrizTempoUltimoAntecessorPrimeiroSucessorTarefa(Solucao& solucao);
 void calcularFO(Solucao& solucao);
 void calcularMatrizBinariaAntecessoresSucessores();
-int calcularNumeroAntecessoresIndice(int indiceTarefaAlvo);
+int calcularNumeroAntecessoresNaoAlocadosIndice(int indiceTarefaAlvo);
 void calcularOrdem(Solucao& solucao);
 int calcularPosicao(Solucao& solucao, int nTarefa);
 void clonar(Solucao& solucaoC, Solucao& solucaoV);
@@ -55,6 +54,6 @@ void gerarVizinho(Solucao& solucao);
 void heuristicaConGul(Solucao& solucao);
 int isViavel(Solucao& solucao);
 void lerArquivo(char* file_name);
-void reorganizarTempos(Solucao& solucao, int inicio);
+void reorganizarTempos(Solucao& solucao);
 void simAnnealing(const double alfa, const double tempInicial, const double tempCongelamento, const int SAMax,
 	Solucao& solucao, const double tempo_max, double& tempoMelhor, double& tempoTotal);
