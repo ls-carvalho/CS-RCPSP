@@ -1,8 +1,13 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 // OBJETIVOS ATUAIS:
-//	IMPLEMENTAR GERACAO DE VIZINHOS
-//	REFATORAR A REORGANIZAÇÃO DE TEMPOS
+//	1 => IMPLEMENTAR/REFATORAR A REORGANIZAÇÃO DE TEMPOS PARA GERACAO DE HEURISTICA CONSTRUTIVA
+//	2 => IMPLEMENTAR GERACAO DE VIZINHOS
+//	3 => IMPLEMENTAR/REFATORAR A REORGANIZAÇÃO DE TEMPOS PARA GERACAO DE VIZINHOS
+// OBJETIVOS ADICIONAIS:
+//	1 => TENTAR APLICAR indiceOrdem = inicio EM reorganizarTempos
+//	2 => CRIAR METODO PARA ALTERAR TODAS AS ESTRUTURAS SIMULTANEAMENTE
+//	3 => APLICAR BOOLEAN
 
 #include <iostream>
 #include <stdlib.h>
@@ -11,14 +16,14 @@
 #include <math.h>
 #include "Solucao.h"
 
-// DEFINE BOOLEAN | TODO => APLICAR
+// DEFINE BOOLEAN
 #define TRUE 1
-#define FALSE 1
+#define FALSE 0
 
 // OPÇÕES:
 //#define EXIBIR_MELHOR
-#define MODO_DBGHEU
-//#define MODO_OPERARACAO
+//#define MODO_DBGHEU
+#define MODO_OPERARACAO
 
 // PARAMETROS:
 #define SA_MAX 3
@@ -65,14 +70,17 @@ int isViavel(Solucao& solucao) {
 	// VARRE O VETOR DE TAREFAS
 	for (int indiceTarefa = 0; indiceTarefa < numTarefas; indiceTarefa++)
 	{
-		if (solucao.matrizTempoInicialFinalTarefa[indiceTarefa][1] > tempoHorizonte) { // TEMPO_FINAL_TAREFA > HORIZONTE
+		// TEMPO_FINAL_TAREFA > HORIZONTE
+		if (solucao.matrizTempoInicialFinalTarefa[indiceTarefa][1] > tempoHorizonte) { 
 			return 0;
 		}
-		for (int indiceSucessor = 1; indiceSucessor < numTarefas - 1; indiceSucessor++)
+		for (int indiceSucessor = 1; indiceSucessor < numTarefas; indiceSucessor++)
 		{
-			// TEMPO_INICIAL_SUCESSOR <= TEMPO_FINAL_TAREFA ? INVIAVEL : VIAVEL.
-			if (solucao.matrizTempoInicialFinalTarefa[indiceSucessor][0] < solucao.matrizTempoInicialFinalTarefa[indiceTarefa][1]) {
-				return 0;
+			if (matrizIndiceSucessorAntecessor[indiceTarefa][indiceSucessor] == 1) {
+				// TEMPO_INICIAL_SUCESSOR <= TEMPO_FINAL_TAREFA ? INVIAVEL : VIAVEL.
+				if (solucao.matrizTempoInicialFinalTarefa[indiceSucessor][0] < solucao.matrizTempoInicialFinalTarefa[indiceTarefa][1]) {
+					return 0;
+				}
 			}
 		}
 	}
@@ -107,7 +115,7 @@ void calcularMatrizTempoUltimoAntecessorPrimeiroSucessorTarefa(Solucao& solucao)
 				menorTempoInicioSucessor = solucao.matrizTempoInicialFinalTarefa[indiceSucessor][0];
 			}
 		}
-		// CALCULA LOWER BOUND, OU SEJA, MAIOR TEMPO DE FIM DENTRE OS ANTECESSORES | TODO => REFATORAR
+		// CALCULA LOWER BOUND, OU SEJA, MAIOR TEMPO DE FIM DENTRE OS ANTECESSORES
 		for (int indiceAntecessor = 0; indiceAntecessor < numTarefas; indiceAntecessor++)
 		{
 			if (matrizIndiceSucessorAntecessor[indiceAntecessor][indiceTarefa] == 1 && maiorTempoFinalAntecessor < solucao.matrizTempoInicialFinalTarefa[indiceAntecessor][1]) {
@@ -118,13 +126,14 @@ void calcularMatrizTempoUltimoAntecessorPrimeiroSucessorTarefa(Solucao& solucao)
 		solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[indiceTarefa][1] = menorTempoInicioSucessor;
 	}
 	// ATUALIZA A POSIÇÃO FINAL DA ULTIMA TAREFA (OVERRIDE EM TEMPO HORIZONTE)
-	solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[numTarefas - 1][1] = solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[numTarefas - 1][0];
+	if (numTarefas - 1 >= 0) {
+		solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[numTarefas - 1][1] = solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[numTarefas - 1][0];
+	}
+	else {
+		std::cout << "BUFFER OVERRUN: numTarefas - 1 = " << numTarefas - 1 << std::endl;
+	}
 }
 
-// TODO => TENTAR APLICAR indiceOrdem = inicio
-// NOTAS DE REFATORAÇÃO:
-//  ESSA FUNÇÃO PRECISA DE SER REFATORADA PARA SER UTILIZADA DEPOIS QUE A MATRIZ DE TEMPO JÁ ESTEJA PREENCHIDA,
-//  ISSO SIGNIFICA QUE A LÓGICA DE COMPARAÇÃO DA LINHA 151 TEM QUE CONTAR COM A TAREFA POSSIVELMENTE COMPUTADA
 void reorganizarTempos(Solucao& solucao) {
 	// INICIALIZA A MATRIZ TEMPOxRECURSO
 	memset(solucao.matrizTempoRecurso, 0, sizeof(solucao.matrizTempoRecurso));
@@ -161,13 +170,12 @@ void reorganizarTempos(Solucao& solucao) {
 				}
 			}
 		}
-		// TODO => CRIAR METODO PARA ALTERAR TODAS AS ESTRUTURAS SIMULTANEAMENTE
-		// DEFINE OS NOVOS TEMPOS DE INICIO E FIM DA TAREFA
+		// DEFINE OS NOVOS TEMPOS DE INICIO E FIM DA TAREFA ATUAL
 		solucao.tempoTarefa[nTarefa - 1] = tempoInicialDisponivel;
 		solucao.matrizTempoInicialFinalTarefa[nTarefa - 1][0] = solucao.tempoTarefa[nTarefa - 1];
 		solucao.matrizTempoInicialFinalTarefa[nTarefa - 1][1] = solucao.tempoTarefa[nTarefa - 1] + tarefas[nTarefa - 1].duration;
-		// TODO => EXTRAIR METODO E ANALISAR SE PODE SER CALCULADA ANTES DO INICIO DA REORGANIZACAO DOS TEMPOS
-		// ATUALIZA A MATRIZ DE TEMPOxRECURSO
+		calcularMatrizTempoUltimoAntecessorPrimeiroSucessorTarefa(solucao);
+		// ATUALIZA A MATRIZ DE TEMPOxRECURSO PARA A TAREFA ATUAL
 		for (int indiceRecurso = 0; indiceRecurso < numRecursos; indiceRecurso++)
 		{
 			if (tarefas[nTarefa - 1].vetRecursos[indiceRecurso] != 0) {
@@ -509,7 +517,7 @@ void clonar(Solucao& solucaoC, Solucao& solucaoV) {
 }
 
 void gerarVizinho(Solucao& solucao) {
-	inicioGeracaoVizinho:
+inicioGeracaoVizinho:
 	srand(time(0));
 	int indiceAleatorio, indiceAlvo, ordemAlvo, tarefasUteis, posicaoMinimaSuperior, posicaoMaximaInferior, distanciaTroca, menorIndice, nTarefa;
 	// DESCARTA A TAREFA 0 E N
