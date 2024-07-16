@@ -1,9 +1,9 @@
 ﻿#pragma once
 
 // CONSTANTES DE LIMITES PARA VETORES
-#define NUM_JOBS 12
-#define NUM_RESOURCES 2
-#define HORIZONTE 35
+#define NUM_JOBS 50
+#define NUM_RESOURCES 10
+#define HORIZONTE 200
 
 // DADOS DA SOLUCAO
 struct sSolucao {
@@ -15,6 +15,7 @@ struct sSolucao {
 	int matrizTempoRecurso[HORIZONTE][NUM_RESOURCES];
 	int matrizTempoInicialFinalTarefa[NUM_JOBS][2]; // [0] = INICIAL | [1] = FINAL
 	int matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[NUM_JOBS][2]; // [0] = ULTIMO ANTECESSOR | [1] = PRIMEIRO SUCESSOR
+	int matrizTarefaUltimoAntecessorPrimeiroSucessorTarefa[NUM_JOBS][2]; // [0] = ULTIMO ANTECESSOR | [1] = PRIMEIRO SUCESSOR
 };
 typedef struct sSolucao Solucao;
 
@@ -40,7 +41,7 @@ int matrizIndiceSucessorAntecessor[NUM_JOBS][NUM_JOBS]; // BINÁRIA: [X][TAREFA]
 long int contador;
 
 // PROTÓTIPOS
-void calcularMatrizTempoUltimoAntecessorPrimeiroSucessorTarefa(Solucao& solucao);
+void calcularMatrizesUltimoAntecessorPrimeiroSucessorTarefa(Solucao& solucao);
 void calcularFO(Solucao& solucao);
 void calcularMatrizBinariaAntecessoresSucessores();
 int calcularNumeroAntecessoresNaoAlocadosIndice(int indiceTarefaAlvo);

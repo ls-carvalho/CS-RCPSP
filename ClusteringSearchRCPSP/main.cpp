@@ -1,9 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 // OBJETIVOS ATUAIS:
-//	1 => IMPLEMENTAR/REFATORAR A REORGANIZA플O DE TEMPOS PARA GERACAO DE HEURISTICA CONSTRUTIVA
-//	2 => IMPLEMENTAR GERACAO DE VIZINHOS
-//	3 => IMPLEMENTAR/REFATORAR A REORGANIZA플O DE TEMPOS PARA GERACAO DE VIZINHOS
+//	1 => DEBUGAR A GERACAO DE VIZINHOS
 // OBJETIVOS ADICIONAIS:
 //	1 => TENTAR APLICAR indiceOrdem = inicio EM reorganizarTempos
 //	2 => CRIAR METODO PARA ALTERAR TODAS AS ESTRUTURAS SIMULTANEAMENTE
@@ -31,15 +29,15 @@
 int main()
 {
 	Solucao solucao, solucao1;
-	char file[25] = "j10";
-	char escrita[25] = "j10\0";
+	char file[25] = "j301_1";
+	char escrita[25] = "j301_1\0";
 	lerArquivo(file);
 #ifdef MODO_DBGHEU
 	heuristicaConGul(solucao);
 	calcularFO(solucao);
 #endif
 #ifdef MODO_OPERARACAO
-	double const alfa = 0.995, tempInicial = 100, tempCongelamento = 0.001, tempoMax = 300;
+	double const alfa = 0.995, tempInicial = 1000, tempCongelamento = 0.001, tempoMax = 300;
 	double tempoMelhor, tempoTotal;
 	int SAMax = SA_MAX;
 	srand(time(0));
@@ -99,20 +97,25 @@ int calcularPosicao(Solucao& solucao, int nTarefa) {
 	return posicao;
 }
 
-void calcularMatrizTempoUltimoAntecessorPrimeiroSucessorTarefa(Solucao& solucao) {
+void calcularMatrizesUltimoAntecessorPrimeiroSucessorTarefa(Solucao& solucao) {
 	// INICIALIZA AS MATRIZES
 	memset(solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa, 0, sizeof(solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa));
+	memset(solucao.matrizTarefaUltimoAntecessorPrimeiroSucessorTarefa, 0, sizeof(solucao.matrizTarefaUltimoAntecessorPrimeiroSucessorTarefa));
 	solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[0][0] = 0;
 	solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[0][1] = 0;
+	solucao.matrizTarefaUltimoAntecessorPrimeiroSucessorTarefa[0][0] = 1;
+	solucao.matrizTarefaUltimoAntecessorPrimeiroSucessorTarefa[0][1] = 1;
 	// PULA A PRIMEIRA TAREFA (INICIO 0, DURA플O 0, INTERVALO 0)
 	for (int indiceTarefa = 1; indiceTarefa < numTarefas; indiceTarefa++)
 	{
 		int menorTempoInicioSucessor = tempoHorizonte, maiorTempoFinalAntecessor = 0;
+		int menorTarefaInicioSucessor = numTarefas - 1, menorTarefaFinalAntecessor = 0;
 		// CALCULA UPPER BOUND, OU SEJA, MENOR TEMPO DE INICIO DENTRE OS SUCESSORES
 		for (int indiceSucessor = 0; indiceSucessor < numTarefas; indiceSucessor++)
 		{
 			if (matrizIndiceSucessorAntecessor[indiceTarefa][indiceSucessor] == 1 && menorTempoInicioSucessor > solucao.matrizTempoInicialFinalTarefa[indiceSucessor][0]) {
 				menorTempoInicioSucessor = solucao.matrizTempoInicialFinalTarefa[indiceSucessor][0];
+				menorTarefaInicioSucessor = indiceSucessor + 1;
 			}
 		}
 		// CALCULA LOWER BOUND, OU SEJA, MAIOR TEMPO DE FIM DENTRE OS ANTECESSORES
@@ -120,14 +123,18 @@ void calcularMatrizTempoUltimoAntecessorPrimeiroSucessorTarefa(Solucao& solucao)
 		{
 			if (matrizIndiceSucessorAntecessor[indiceAntecessor][indiceTarefa] == 1 && maiorTempoFinalAntecessor < solucao.matrizTempoInicialFinalTarefa[indiceAntecessor][1]) {
 				maiorTempoFinalAntecessor = solucao.matrizTempoInicialFinalTarefa[indiceAntecessor][1];
+				menorTarefaFinalAntecessor = indiceAntecessor + 1;
 			}
 		}
 		solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[indiceTarefa][0] = maiorTempoFinalAntecessor;
 		solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[indiceTarefa][1] = menorTempoInicioSucessor;
+		solucao.matrizTarefaUltimoAntecessorPrimeiroSucessorTarefa[indiceTarefa][0] = menorTarefaFinalAntecessor;
+		solucao.matrizTarefaUltimoAntecessorPrimeiroSucessorTarefa[indiceTarefa][1] = menorTarefaInicioSucessor;
 	}
 	// ATUALIZA A POSI플O FINAL DA ULTIMA TAREFA (OVERRIDE EM TEMPO HORIZONTE)
 	if (numTarefas - 1 >= 0) {
 		solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[numTarefas - 1][1] = solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[numTarefas - 1][0];
+		solucao.matrizTarefaUltimoAntecessorPrimeiroSucessorTarefa[numTarefas - 1][1] = numTarefas;
 	}
 	else {
 		std::cout << "BUFFER OVERRUN: numTarefas - 1 = " << numTarefas - 1 << std::endl;
@@ -174,7 +181,7 @@ void reorganizarTempos(Solucao& solucao) {
 		solucao.tempoTarefa[nTarefa - 1] = tempoInicialDisponivel;
 		solucao.matrizTempoInicialFinalTarefa[nTarefa - 1][0] = solucao.tempoTarefa[nTarefa - 1];
 		solucao.matrizTempoInicialFinalTarefa[nTarefa - 1][1] = solucao.tempoTarefa[nTarefa - 1] + tarefas[nTarefa - 1].duration;
-		calcularMatrizTempoUltimoAntecessorPrimeiroSucessorTarefa(solucao);
+		calcularMatrizesUltimoAntecessorPrimeiroSucessorTarefa(solucao);
 		// ATUALIZA A MATRIZ DE TEMPOxRECURSO PARA A TAREFA ATUAL
 		for (int indiceRecurso = 0; indiceRecurso < numRecursos; indiceRecurso++)
 		{
@@ -297,7 +304,7 @@ void heuristicaConGul(Solucao& solucao) {
 	// POSI플O FINAL DA TEREFA FINAL = POSI플O INICIAL DA TEREFA FINAL (SEM DURA플O)
 	solucao.matrizTempoInicialFinalTarefa[numTarefas - 1][1] = solucao.matrizTempoInicialFinalTarefa[numTarefas - 1][0];
 	solucao.tempoTarefa[numTarefas - 1] = solucao.matrizTempoInicialFinalTarefa[numTarefas - 1][0];
-	calcularMatrizTempoUltimoAntecessorPrimeiroSucessorTarefa(solucao);
+	calcularMatrizesUltimoAntecessorPrimeiroSucessorTarefa(solucao);
 	reorganizarTempos(solucao);
 }
 
@@ -504,6 +511,7 @@ void calcularFO(Solucao& solucao) {
 }
 
 void exibirSolucao(Solucao& solucao) {
+	std::cout << "========================" << std::endl;
 	std::cout << "FO: " << solucao.resultFO << std::endl;
 	std::cout << "Makespan: " << solucao.makespan << std::endl;
 	for (int nTarefa = 0; nTarefa < numTarefas; nTarefa++)
@@ -519,37 +527,37 @@ void clonar(Solucao& solucaoC, Solucao& solucaoV) {
 void gerarVizinho(Solucao& solucao) {
 inicioGeracaoVizinho:
 	srand(time(0));
-	int indiceAleatorio, indiceAlvo, ordemAlvo, tarefasUteis, posicaoMinimaSuperior, posicaoMaximaInferior, distanciaTroca, menorIndice, nTarefa;
-	// DESCARTA A TAREFA 0 E N
-	tarefasUteis = numTarefas - 2;
+	int indiceAleatorio, indiceAlvo, ordemAlvo, numTarefasAlteraveis, distanciaTroca, menorIndice, nTarefa;
+	int tarefaUltimoAntecessor, tarefaPrimeiroSucessor, indicePosicaoMinimaPossivel = 0, indicePosicaoMaximaPossivel = numTarefas - 1;
+	// DESCARTA PRIMEIRA E ULTIMA TAREFAS
+	numTarefasAlteraveis = numTarefas - 2;
 	// OBTEM RESULTADO ENTRE 1 E N-2
-	indiceAleatorio = rand() % tarefasUteis + 1;
-	posicaoMaximaInferior = solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[indiceAleatorio][0];
-	posicaoMinimaSuperior = solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa[indiceAleatorio][1];
-	//if (posicaoMaximaInferior == 1) posicaoMaximaInferior++;
-	//if (posicaoMinimaSuperior == numTarefas - 1) posicaoMinimaSuperior--;
-	// distanciaTroca = posicaoMinimaSuperior - posicaoMaximaInferior + 1;
-	distanciaTroca = posicaoMinimaSuperior - posicaoMaximaInferior;
-	if (distanciaTroca <= 0) {
+	indiceAleatorio = rand() % numTarefasAlteraveis + 1;
+	// OBTEM O LOWER BOUND E O UPPER BOUND
+	tarefaUltimoAntecessor = solucao.matrizTarefaUltimoAntecessorPrimeiroSucessorTarefa[indiceAleatorio][0];
+	tarefaPrimeiroSucessor = solucao.matrizTarefaUltimoAntecessorPrimeiroSucessorTarefa[indiceAleatorio][1];
+	// ENCONTRAR POSI플O DO LOWER E DO UPPER BOUND
+	for (int indiceTarefa = 0; indiceTarefa < numTarefas; indiceTarefa++)
+	{
+		if (solucao.ordemTarefa[indiceTarefa] == tarefaUltimoAntecessor) 
+			indicePosicaoMinimaPossivel = indiceTarefa;
+		if (solucao.ordemTarefa[indiceTarefa] == tarefaPrimeiroSucessor) 
+			indicePosicaoMaximaPossivel = indiceTarefa;
+	}
+	// DISTANCIA DE TROCA = POSI플O UPPER BOUND - POSI플O DO LOWER BOUND
+	distanciaTroca = indicePosicaoMaximaPossivel - indicePosicaoMinimaPossivel;
+	if (distanciaTroca - 1 <= 0) {
 		goto inicioGeracaoVizinho;
 	}
-	// OBTEM UM RESULTADO ENTRE O MAXIMO INFERIOR ATE O MINIMO SUPERIOR
-	ordemAlvo = rand() % distanciaTroca + posicaoMaximaInferior;
-	indiceAlvo = ordemAlvo - 1;
-	if (indiceAleatorio == indiceAlvo) {
-		goto inicioGeracaoVizinho;
-	}
+	// OBTEM UM RESULTADO ENTRE AS POSI합ES MINIMA E A MAXIMA POSSIVEIS
+	do {
+		indiceAlvo = rand() % (distanciaTroca - 1) + (indicePosicaoMinimaPossivel + 1);
+	} while (indiceAleatorio == indiceAlvo);
 	// ALTERA A ORDEM DAS TAREFAS
 	nTarefa = solucao.ordemTarefa[indiceAleatorio];
 	solucao.ordemTarefa[indiceAleatorio] = solucao.ordemTarefa[indiceAlvo];
 	solucao.ordemTarefa[indiceAlvo] = nTarefa;
 	// REORGANIZA OS TEMPOS
-	if (indiceAleatorio < indiceAlvo) {
-		menorIndice = indiceAleatorio;
-	}
-	else {
-		menorIndice = indiceAlvo;
-	}
 	reorganizarTempos(solucao);
 	calcularFO(solucao);
 }
@@ -584,6 +592,7 @@ void simAnnealing(const double alfa, const double tempInicial, const double temp
 						memcpy(&solucao, &solucaoVizinha, sizeof(solucao));
 						clockFinal = clock();
 						tempoMelhor = ((double)(clockFinal - clockInicial)) / CLOCKS_PER_SEC;
+						exibirSolucao(solucaoVizinha);
 					}
 				}
 				else {
