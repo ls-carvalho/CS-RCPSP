@@ -37,7 +37,7 @@ int main()
 	calcularFO(solucao);
 #endif
 #ifdef MODO_OPERARACAO
-	double const alfa = 0.995, tempInicial = 1000, tempCongelamento = 0.001, tempoMax = 300;
+	double const alfa = 0.995, tempInicial = 1000, tempCongelamento = 0.001, tempoMax = 900;
 	double tempoMelhor, tempoTotal;
 	int SAMax = SA_MAX;
 	srand(time(0));
@@ -527,7 +527,7 @@ void clonar(Solucao& solucaoC, Solucao& solucaoV) {
 void gerarVizinho(Solucao& solucao) {
 inicioGeracaoVizinho:
 	srand(time(0));
-	int indiceAleatorio, indiceAlvo, ordemAlvo, numTarefasAlteraveis, distanciaTroca, menorIndice, nTarefa;
+	int indiceAleatorio, indiceAlvo, numTarefasAlteraveis, distanciaTroca, nTarefa;
 	int tarefaUltimoAntecessor, tarefaPrimeiroSucessor, indicePosicaoMinimaPossivel = 0, indicePosicaoMaximaPossivel = numTarefas - 1;
 	// DESCARTA PRIMEIRA E ULTIMA TAREFAS
 	numTarefasAlteraveis = numTarefas - 2;
@@ -552,6 +552,7 @@ inicioGeracaoVizinho:
 	// OBTEM UM RESULTADO ENTRE AS POSIÇÕES MINIMA E A MAXIMA POSSIVEIS
 	do {
 		indiceAlvo = rand() % (distanciaTroca - 1) + (indicePosicaoMinimaPossivel + 1);
+		srand(time(0));
 	} while (indiceAleatorio == indiceAlvo);
 	// ALTERA A ORDEM DAS TAREFAS
 	nTarefa = solucao.ordemTarefa[indiceAleatorio];
@@ -585,6 +586,7 @@ void simAnnealing(const double alfa, const double tempInicial, const double temp
 				memcpy(&solucaoVizinha, &solucaoAtual, sizeof(solucaoVizinha));
 				gerarVizinho(solucaoVizinha);
 				contador++;
+				std::cout << "CONTADOR: " << contador << std::endl;
 				delta = solucaoVizinha.resultFO - solucaoAtual.resultFO;
 				if (delta < 0) {
 					memcpy(&solucaoAtual, &solucaoVizinha, sizeof(solucaoAtual));
@@ -593,6 +595,7 @@ void simAnnealing(const double alfa, const double tempInicial, const double temp
 						clockFinal = clock();
 						tempoMelhor = ((double)(clockFinal - clockInicial)) / CLOCKS_PER_SEC;
 						exibirSolucao(solucaoVizinha);
+						std::cout << "Solucao Viavel: " << isViavel(solucaoVizinha) << std::endl;
 					}
 				}
 				else {
