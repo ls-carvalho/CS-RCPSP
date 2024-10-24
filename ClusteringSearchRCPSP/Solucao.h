@@ -51,9 +51,11 @@ void clonar(Solucao& solucaoC, Solucao& solucaoV);
 void escreverEmArquivo(char* file_name, Solucao solucao);
 void exibirSolucao(Solucao& solucao);
 void gerarVizinho(Solucao& solucao);
+void exibirEstruturas(Solucao& solucao);
 void heuristicaConGul(Solucao& solucao);
 int isViavel(Solucao& solucao);
 void lerArquivo(char* file_name);
-void reorganizarTempos(Solucao& solucao);
+void reorganizarTemposHeuristicaConGul(Solucao& solucao);
+void reorganizarTemposGeracaoVizinho(Solucao& solucao);
 void simAnnealing(const double alfa, const double tempInicial, const double tempCongelamento, const int SAMax,
 	Solucao& solucao, const double tempo_max, double& tempoMelhor, double& tempoTotal);

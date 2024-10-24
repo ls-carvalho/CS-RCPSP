@@ -1,7 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 // OBJETIVOS ATUAIS:
-//	1 => DEBUGAR A GERACAO DE VIZINHOS
+//	1 => DEBUGAR A REORGANIZACAO DE TEMPOS DURANTE A GERACAO DE VIZINHOS (LOOP INFINITO E TROCAS INCORRETAS)
 // OBJETIVOS ADICIONAIS:
 //	1 => TENTAR APLICAR indiceOrdem = inicio EM reorganizarTempos
 //	2 => CRIAR METODO PARA ALTERAR TODAS AS ESTRUTURAS SIMULTANEAMENTE
@@ -37,7 +37,7 @@ int main()
 	calcularFO(solucao);
 #endif
 #ifdef MODO_OPERARACAO
-	double const alfa = 0.995, tempInicial = 1000, tempCongelamento = 0.001, tempoMax = 900;
+	double const alfa = 0.995, tempInicial = 1000, tempCongelamento = 0.001, tempoMax = 5400;
 	double tempoMelhor, tempoTotal;
 	int SAMax = SA_MAX;
 	srand(time(0));
@@ -61,6 +61,7 @@ int isViavel(Solucao& solucao) {
 		for (int tempo = 0; tempo < tempoHorizonte; tempo++)
 		{
 			if (solucao.matrizTempoRecurso[tempo][nRecurso] > recursosDisponiveis[nRecurso]) {
+				std::cout << "Violacao do recurso " << nRecurso << " no tempo " << tempo << std::endl;
 				return 0;
 			}
 		}
@@ -77,6 +78,7 @@ int isViavel(Solucao& solucao) {
 			if (matrizIndiceSucessorAntecessor[indiceTarefa][indiceSucessor] == 1) {
 				// TEMPO_INICIAL_SUCESSOR <= TEMPO_FINAL_TAREFA ? INVIAVEL : VIAVEL.
 				if (solucao.matrizTempoInicialFinalTarefa[indiceSucessor][0] < solucao.matrizTempoInicialFinalTarefa[indiceTarefa][1]) {
+					std::cout << "Violacao da precedencia da tarefa " << indiceSucessor + 1 << " com o antecessor " << indiceTarefa + 1 << std::endl;
 					return 0;
 				}
 			}
@@ -141,12 +143,14 @@ void calcularMatrizesUltimoAntecessorPrimeiroSucessorTarefa(Solucao& solucao) {
 	}
 }
 
-void reorganizarTempos(Solucao& solucao) {
+void reorganizarTemposHeuristicaConGul(Solucao& solucao) {
 	// INICIALIZA A MATRIZ TEMPOxRECURSO
 	memset(solucao.matrizTempoRecurso, 0, sizeof(solucao.matrizTempoRecurso));
 	// AJUSTA OS HORARIOS, SEGUINDO ORDEM DA SOLUCAO (IGNORANDO A PRIMEIRA E A ULTIMA TAREFA => 1 ATÉ N-1)
 	for (int indiceOrdem = 1; indiceOrdem < (numTarefas - 1); indiceOrdem++)
 	{
+		/*std::cout << "IndiceOrdem:" << indiceOrdem << std::endl;
+		exibirEstruturas(solucao);*/
 		int nTarefa = solucao.ordemTarefa[indiceOrdem];
 		int indiceTarefa = nTarefa - 1;
 		// DEFINE O MAIOR HORARIO DE FIM DOS ANTECESSORES
@@ -181,6 +185,7 @@ void reorganizarTempos(Solucao& solucao) {
 		solucao.tempoTarefa[nTarefa - 1] = tempoInicialDisponivel;
 		solucao.matrizTempoInicialFinalTarefa[nTarefa - 1][0] = solucao.tempoTarefa[nTarefa - 1];
 		solucao.matrizTempoInicialFinalTarefa[nTarefa - 1][1] = solucao.tempoTarefa[nTarefa - 1] + tarefas[nTarefa - 1].duration;
+		// SUBSTITUIR METODO POR MANUAL
 		calcularMatrizesUltimoAntecessorPrimeiroSucessorTarefa(solucao);
 		// ATUALIZA A MATRIZ DE TEMPOxRECURSO PARA A TAREFA ATUAL
 		for (int indiceRecurso = 0; indiceRecurso < numRecursos; indiceRecurso++)
@@ -192,6 +197,106 @@ void reorganizarTempos(Solucao& solucao) {
 				}
 			}
 		}
+		/*int aux = isViavel(solucao);
+		if (aux == 0) {
+			std::cout << "Inviavel ao final do FOR: " << aux << std::endl;
+			exibirEstruturas(solucao);
+			system("pause");
+		}*/
+	}
+	// REDEFINE O HORARIO DE INICIO/FIM DA ULTIMA TAREFA
+	int maiorTempoFim = 0;
+	for (int indiceTarefa = 0; indiceTarefa < (numTarefas - 1); indiceTarefa++)
+	{
+		if (maiorTempoFim < solucao.matrizTempoInicialFinalTarefa[indiceTarefa][1]) {
+			maiorTempoFim = solucao.matrizTempoInicialFinalTarefa[indiceTarefa][1];
+		}
+	}
+	if (numTarefas - 1 >= 0) {
+		solucao.matrizTempoInicialFinalTarefa[numTarefas - 1][0] = maiorTempoFim;
+		solucao.matrizTempoInicialFinalTarefa[numTarefas - 1][1] = maiorTempoFim;
+		solucao.tempoTarefa[numTarefas - 1] = maiorTempoFim;
+	}
+	else {
+		std::cout << "BUFFER OVERRUN: numTarefas - 1 = " << numTarefas - 1 << std::endl;
+	}
+	calcularOrdem(solucao);
+}
+
+void reorganizarTemposGeracaoVizinho(Solucao& solucao) {
+	// INICIALIZA A MATRIZ TEMPOxRECURSO
+	memset(solucao.matrizTempoRecurso, 0, sizeof(solucao.matrizTempoRecurso));
+	memset(solucao.matrizTempoInicialFinalTarefa, 0, sizeof(solucao.matrizTempoInicialFinalTarefa));
+	memset(solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa, 0, sizeof(solucao.matrizTempoUltimoAntecessorPrimeiroSucessorTarefa));
+	memset(solucao.matrizTarefaUltimoAntecessorPrimeiroSucessorTarefa, 0, sizeof(solucao.matrizTarefaUltimoAntecessorPrimeiroSucessorTarefa));
+	// AJUSTA OS HORARIOS, SEGUINDO ORDEM DA SOLUCAO (IGNORANDO A PRIMEIRA E A ULTIMA TAREFA => 1 ATÉ N-1)
+	for (int indiceOrdem = 1; indiceOrdem < (numTarefas - 1); indiceOrdem++)
+	{
+		/*std::cout << "IndiceOrdem:" << indiceOrdem << std::endl;
+		exibirEstruturas(solucao);*/
+		int nTarefa = solucao.ordemTarefa[indiceOrdem];
+		int indiceTarefa = nTarefa - 1;
+		// DEFINE O MAIOR HORARIO DE FIM DOS ANTECESSORES
+		int tempoInicialDisponivel = 0;
+		for (int indiceOrdemAlocada = 1; indiceOrdemAlocada < indiceOrdem; indiceOrdemAlocada++)
+		{
+			int nTarefaAlocada = solucao.ordemTarefa[indiceOrdemAlocada];
+			if (matrizIndiceSucessorAntecessor[nTarefaAlocada - 1][nTarefa - 1] == 1) {
+				if (tempoInicialDisponivel < solucao.matrizTempoInicialFinalTarefa[nTarefaAlocada - 1][1]) {
+					tempoInicialDisponivel = solucao.matrizTempoInicialFinalTarefa[nTarefaAlocada - 1][1];
+				}
+			}
+		}
+		if (tempoInicialDisponivel == 0 && nTarefa > 4) {
+			std::cout << "INVESTIGAR" << std::endl;
+		}
+		// TENTA ENCONTRAR UM TEMPO COM RECURSO DISPONIVEL PARA TODA A DURAÇÃO DA TAREFA
+		int hasRecursoDisponivelNoTempoAtual = 0;
+		while (hasRecursoDisponivelNoTempoAtual == 0) {
+			hasRecursoDisponivelNoTempoAtual = 1;
+			for (int indiceRecurso = 0; indiceRecurso < numRecursos; indiceRecurso++)
+			{
+				if (tarefas[indiceTarefa].vetRecursos[indiceRecurso] == 0) {
+					continue;
+				}
+				else {
+					int isDentroLimiteRecurso = 1;
+					for (int tempoRecurso = tempoInicialDisponivel; tempoRecurso < (tempoInicialDisponivel + tarefas[indiceTarefa].duration); tempoRecurso++)
+					{
+						if (solucao.matrizTempoRecurso[tempoRecurso][indiceRecurso] + tarefas[indiceTarefa].vetRecursos[indiceRecurso] > recursosDisponiveis[indiceRecurso]) {
+							isDentroLimiteRecurso = 0;
+							break;
+						}
+					}
+					if (isDentroLimiteRecurso == 0) {
+						tempoInicialDisponivel += 1;
+						hasRecursoDisponivelNoTempoAtual = 0;
+						break;
+					}
+				}
+			}
+		}
+		// DEFINE OS NOVOS TEMPOS DE INICIO E FIM DA TAREFA ATUAL
+		solucao.tempoTarefa[nTarefa - 1] = tempoInicialDisponivel;
+		solucao.matrizTempoInicialFinalTarefa[nTarefa - 1][0] = tempoInicialDisponivel;
+		solucao.matrizTempoInicialFinalTarefa[nTarefa - 1][1] = tempoInicialDisponivel + tarefas[nTarefa - 1].duration;
+		calcularMatrizesUltimoAntecessorPrimeiroSucessorTarefa(solucao);
+		// ATUALIZA A MATRIZ DE TEMPOxRECURSO PARA A TAREFA ATUAL
+		for (int indiceRecurso = 0; indiceRecurso < numRecursos; indiceRecurso++)
+		{
+			if (tarefas[nTarefa - 1].vetRecursos[indiceRecurso] != 0) {
+				for (int tempo = solucao.matrizTempoInicialFinalTarefa[nTarefa - 1][0]; tempo < solucao.matrizTempoInicialFinalTarefa[nTarefa - 1][1]; tempo++)
+				{
+					solucao.matrizTempoRecurso[tempo][indiceRecurso] += tarefas[nTarefa - 1].vetRecursos[indiceRecurso];
+				}
+			}
+		}
+		/*int aux = isViavel(solucao);
+		if (aux == 0) {
+			std::cout << "Inviavel ao final do FOR: " << aux << std::endl;
+			exibirEstruturas(solucao);
+			system("pause");
+		}*/
 	}
 	// REDEFINE O HORARIO DE INICIO/FIM DA ULTIMA TAREFA
 	int maiorTempoFim = 0;
@@ -305,7 +410,7 @@ void heuristicaConGul(Solucao& solucao) {
 	solucao.matrizTempoInicialFinalTarefa[numTarefas - 1][1] = solucao.matrizTempoInicialFinalTarefa[numTarefas - 1][0];
 	solucao.tempoTarefa[numTarefas - 1] = solucao.matrizTempoInicialFinalTarefa[numTarefas - 1][0];
 	calcularMatrizesUltimoAntecessorPrimeiroSucessorTarefa(solucao);
-	reorganizarTempos(solucao);
+	reorganizarTemposHeuristicaConGul(solucao);
 }
 
 void lerArquivo(char* file) {
@@ -525,6 +630,8 @@ void clonar(Solucao& solucaoC, Solucao& solucaoV) {
 }
 
 void gerarVizinho(Solucao& solucao) {
+	std::cout << "==================================================" << std::endl;
+	std::cout << "Inicio da Geração de Vizinhos: " << isViavel(solucao) << std::endl;
 inicioGeracaoVizinho:
 	srand(time(0));
 	int indiceAleatorio, indiceAlvo, numTarefasAlteraveis, distanciaTroca, nTarefa;
@@ -540,27 +647,89 @@ inicioGeracaoVizinho:
 	for (int indiceTarefa = 0; indiceTarefa < numTarefas; indiceTarefa++)
 	{
 		if (solucao.ordemTarefa[indiceTarefa] == tarefaUltimoAntecessor) 
-			indicePosicaoMinimaPossivel = indiceTarefa;
+			indicePosicaoMinimaPossivel = indiceTarefa + 1;
 		if (solucao.ordemTarefa[indiceTarefa] == tarefaPrimeiroSucessor) 
-			indicePosicaoMaximaPossivel = indiceTarefa;
+			indicePosicaoMaximaPossivel = indiceTarefa - 1;
 	}
 	// DISTANCIA DE TROCA = POSIÇÃO UPPER BOUND - POSIÇÃO DO LOWER BOUND
-	distanciaTroca = indicePosicaoMaximaPossivel - indicePosicaoMinimaPossivel;
-	if (distanciaTroca - 1 <= 0) {
+	distanciaTroca = (indicePosicaoMaximaPossivel - indicePosicaoMinimaPossivel) + 1;
+	if (distanciaTroca - 2 <= 0) {
+		std::cout << "GOTO 1" << std::endl;
 		goto inicioGeracaoVizinho;
 	}
 	// OBTEM UM RESULTADO ENTRE AS POSIÇÕES MINIMA E A MAXIMA POSSIVEIS
 	do {
-		indiceAlvo = rand() % (distanciaTroca - 1) + (indicePosicaoMinimaPossivel + 1);
+		indiceAlvo = rand() % distanciaTroca + indicePosicaoMinimaPossivel;
 		srand(time(0));
 	} while (indiceAleatorio == indiceAlvo);
+
+	tarefaUltimoAntecessor = solucao.matrizTarefaUltimoAntecessorPrimeiroSucessorTarefa[indiceAlvo][0];
+	tarefaPrimeiroSucessor = solucao.matrizTarefaUltimoAntecessorPrimeiroSucessorTarefa[indiceAlvo][1];
+	indicePosicaoMinimaPossivel = 0;
+	indicePosicaoMaximaPossivel = numTarefas - 1;
+	for (int indiceTarefa = 0; indiceTarefa < numTarefas; indiceTarefa++)
+	{
+		if (solucao.ordemTarefa[indiceTarefa] == tarefaUltimoAntecessor)
+			indicePosicaoMinimaPossivel = indiceTarefa + 1;
+		if (solucao.ordemTarefa[indiceTarefa] == tarefaPrimeiroSucessor)
+			indicePosicaoMaximaPossivel = indiceTarefa - 1;
+	}
+	distanciaTroca = (indicePosicaoMaximaPossivel - indicePosicaoMinimaPossivel) + 1;
+	if (distanciaTroca - 2 <= 0) {
+		std::cout << "GOTO 2" << std::endl;
+		goto inicioGeracaoVizinho;
+	}
+	if (indiceAleatorio < indicePosicaoMinimaPossivel || indiceAleatorio > indicePosicaoMaximaPossivel)
+	{
+		std::cout << "GOTO 3" << std::endl;
+		goto inicioGeracaoVizinho;
+	}
+
+	if (matrizIndiceSucessorAntecessor[solucao.ordemTarefa[indiceAlvo] - 1][solucao.ordemTarefa[indiceAleatorio] - 1] == 1) {
+		std::cout << "ERRO: TROCA DE ANTECESSOR COM SUCESSOR" << solucao.ordemTarefa[indiceAlvo] << std::endl;
+		goto inicioGeracaoVizinho;
+	}
+
+	std::cout << "Tarefa Alea: " << solucao.ordemTarefa[indiceAlvo] << std::endl;
+	std::cout << "Tarefa Alvo: " << solucao.ordemTarefa[indiceAleatorio] << std::endl;
 	// ALTERA A ORDEM DAS TAREFAS
 	nTarefa = solucao.ordemTarefa[indiceAleatorio];
 	solucao.ordemTarefa[indiceAleatorio] = solucao.ordemTarefa[indiceAlvo];
 	solucao.ordemTarefa[indiceAlvo] = nTarefa;
 	// REORGANIZA OS TEMPOS
-	reorganizarTempos(solucao);
+	reorganizarTemposGeracaoVizinho(solucao);
 	calcularFO(solucao);
+	exibirSolucao(solucao);
+	int aux = isViavel(solucao);
+	std::cout << "Depois de reorganizar tempos: " << aux << std::endl;
+	if (aux == 0) {
+		exibirEstruturas(solucao);
+		system("pause");
+	}
+	std::cout << "==================================================" << std::endl;
+}
+
+void exibirEstruturas(Solucao& solucao)
+{
+	std::cout << "Matriz Tarefa Ultimo Antecessor Primeiro Sucessor: " << std::endl;
+	for (int i = 0; i < numTarefas; i++)
+	{
+		std::cout << i << " = [" << solucao.matrizTarefaUltimoAntecessorPrimeiroSucessorTarefa[i][0] << "][" << solucao.matrizTarefaUltimoAntecessorPrimeiroSucessorTarefa[i][1] << "]" << std::endl;
+	}
+	std::cout << "Matriz Tempo Inicial Final Tarefa: " << std::endl;
+	for (int i = 0; i < numTarefas; i++)
+	{
+		std::cout << i << " = [" << solucao.matrizTempoInicialFinalTarefa[i][0] << "][" << solucao.matrizTempoInicialFinalTarefa[i][1] << "]" << std::endl;
+	}
+	std::cout << "Matriz Tempo Recurso: " << std::endl;
+	for (int i = 0; i < numTarefas; i++)
+	{
+		for (int j = 0; j < numRecursos; j++)
+		{
+			std::cout << "[" << solucao.matrizTempoRecurso[i][j] << "]";
+		}
+		std::cout << std::endl;
+	}
 }
 
 void simAnnealing(const double alfa, const double tempInicial, const double tempCongelamento, const int SAMax,
@@ -586,7 +755,7 @@ void simAnnealing(const double alfa, const double tempInicial, const double temp
 				memcpy(&solucaoVizinha, &solucaoAtual, sizeof(solucaoVizinha));
 				gerarVizinho(solucaoVizinha);
 				contador++;
-				std::cout << "CONTADOR: " << contador << std::endl;
+				//std::cout << "CONTADOR: " << contador << std::endl;
 				delta = solucaoVizinha.resultFO - solucaoAtual.resultFO;
 				if (delta < 0) {
 					memcpy(&solucaoAtual, &solucaoVizinha, sizeof(solucaoAtual));
@@ -594,6 +763,17 @@ void simAnnealing(const double alfa, const double tempInicial, const double temp
 						memcpy(&solucao, &solucaoVizinha, sizeof(solucao));
 						clockFinal = clock();
 						tempoMelhor = ((double)(clockFinal - clockInicial)) / CLOCKS_PER_SEC;
+						std::cout << "===================" << std::endl;
+						std::cout << "===================" << std::endl;
+						std::cout << "===================" << std::endl;
+						std::cout << "===================" << std::endl;
+						std::cout << "===================" << std::endl;
+						std::cout << "NOVA SOLUCAO MELHOR" << std::endl;
+						std::cout << "===================" << std::endl;
+						std::cout << "===================" << std::endl;
+						std::cout << "===================" << std::endl;
+						std::cout << "===================" << std::endl;
+						std::cout << "===================" << std::endl;
 						exibirSolucao(solucaoVizinha);
 						std::cout << "Solucao Viavel: " << isViavel(solucaoVizinha) << std::endl;
 					}
